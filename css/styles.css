@@ -132,3 +132,34 @@ html, body {
 
 .custom-city-label { pointer-events: none; }
 .station-val-label { pointer-events: none; }
+
+/* Mobile Responsiveness (< 768px) */
+@media (max-width: 768px) {
+    .map-sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 88vw;
+        max-width: 360px;
+        z-index: 1005;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.75);
+    }
+
+    .top-map-bar {
+        top: 10px;
+        left: 10px;
+        padding: 4px 8px;
+        gap: 6px;
+    }
+
+    .top-map-bar .btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+
+    .leaflet-control-zoom {
+        margin-bottom: 24px !important;
+        margin-right: 12px !important;
+    }
+}

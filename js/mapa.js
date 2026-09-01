@@ -1753,6 +1753,15 @@ window.initMapa = function() {
 // Auto-start map on standalone page
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    
+    // Na telefonach domyślnie zwijamy panel boczny, aby od razu pokazać pełną mapę
+    if (window.innerWidth < 768) {
+        const sb = document.getElementById('map-sidebar');
+        const icon = document.getElementById('sidebar-toggle-icon');
+        if (sb) sb.classList.add('sidebar-collapsed');
+        if (icon) icon.setAttribute('data-lucide', 'panel-left-open');
+    }
+
     setTimeout(() => {
         if (typeof window.initMapa === 'function') {
             window.initMapa();
