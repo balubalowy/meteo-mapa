@@ -1566,43 +1566,12 @@ window.initMapa = function() {
         }
 
         window.renderIMGW = async function() {
-            const okres = document.getElementById('imgw-okres').value;
-            const zmienna = document.getElementById('imgw-zmienna').value;
+            const zmienna = document.getElementById('imgw-zmienna')?.value || 'temp';
             
-            let data = null;
-            
-            if (okres === 'now') {
-                const liveDataObj = await getIMGWLiveData();
-                if(liveDataObj) {
-                    data = liveDataObj[zmienna];
-                }
-            } else {
-                // Historia Firebase (Lazy-load na żądanie - oszczędza 11.75 MB przy każdym załadowaniu strony)
-                if (!imgwData) {
-                    const loadingEl = document.getElementById('imgw-loading');
-                    if (loadingEl) {
-                        loadingEl.style.display = 'flex';
-                        loadingEl.innerHTML = '<i data-lucide="loader" class="spin"></i> Wczytywanie danych historycznych (Firebase)...';
-                    }
-                    try {
-                        let token = window.getFirebaseToken ? await window.getFirebaseToken() : null;
-                        let authParam = token ? `?auth=${token}` : '';
-                        const res = await fetch(`https://meteo-bbe28-default-rtdb.europe-west1.firebasedatabase.app/imgw_map_data.json${authParam}`);
-                        const text = await res.text();
-                        if (window.trackFirebaseDownload) window.trackFirebaseDownload(text.length);
-                        imgwData = JSON.parse(text);
-                    } catch (e) {
-                        console.error("Błąd pobierania historii Firebase:", e);
-                    } finally {
-                        if (loadingEl) loadingEl.style.display = 'none';
-                    }
-                }
-                if(!imgwData || !imgwData.MAP_DATA) return;
-                const ds = imgwData.MAP_DATA[zmienna];
-                if(ds && ds[okres]) data = ds[okres];
-            }
-
-            if(!data) return;
+            const liveDataObj = await getIMGWLiveData();
+            if (!liveDataObj) return;
+            const data = liveDataObj[zmienna];
+            if (!data) return;
 
             imgwLayerGroup.clearLayers();
             if(idwOverlay) {
