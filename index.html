@@ -170,30 +170,24 @@
             </div>
         </div>
         
-        <!-- SEKCJA: Prognoza Ensemble -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="sliders" style="width: 16px; height: 16px;"></i> Prognoza Ensemble (T_max)
+        <!-- SEKCJA: Źródła danych i autorstwo -->
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="shield-check" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Źródła danych i autorstwo
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                 <div>
-                      <label style="font-size: 0.75rem; color: var(--text-secondary);">Próg Temp:</label>
-                      <select id="ens-thresh" class="form-select" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
-                         <option value="30">30°C (Upał)</option>
-                         <option value="32">32°C (Silny Upał)</option>
-                         <option value="35">35°C (Ekstremum)</option>
-                      </select>
-                 </div>
-                 <div>
-                      <label style="font-size: 0.75rem; color: var(--text-secondary);">Dni do przodu:</label>
-                      <select id="ens-days" class="form-select" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
-                         <option value="1">+1 dzień</option>
-                         <option value="2">+2 dni</option>
-                         <option value="3">+3 dni</option>
-                      </select>
-                 </div>
-                 <button class="btn btn-primary" style="width: 100%; font-size: 0.85rem; padding: 8px;" onclick="openEnsembleModal()"><i data-lucide="zap"></i> Otwórz Mapę Ensemble</button>
+            <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
+                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych:
+                <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem;">
+                    <li><b>IMGW-PIB</b> — telemetria stacji, SYNOP QNH, radar CMAX.</li>
+                    <li><b>EUMETSAT</b> — satelita geostacjonarny (HRV i IR).</li>
+                    <li><b>Blitzortung</b> — sieć detekcji wyładowań na żywo.</li>
+                    <li><b>Esri / OSM</b> — podkłady kartograficzne.</li>
+                </ul>
+            </div>
+            
+            <div style="font-size: 0.74rem; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+                Właścicielem opracowania i autorem wizualizacji map jest <b>Bartosz Drobisz</b>. Wszelkie prawa zastrzeżone.
             </div>
         </div>
 
@@ -232,18 +226,7 @@
     </div>
 </div>
 
-<!-- Modal Ensemble -->
-<div id="ensemble-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; box-sizing: border-box;">
-    <div style="width: 100%; height: 100%; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
-        <div style="padding: 10px 20px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
-             <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;"><i data-lucide="cloud-lightning"></i> Prognoza Ensemble</h3>
-             <button class="btn btn-ghost" style="padding: 5px; color: var(--text-secondary);" onclick="document.getElementById('ensemble-modal').style.display='none'"><i data-lucide="x"></i></button>
-        </div>
-        <div id="ensemble-iframe-container" style="flex: 1; width: 100%; position: relative;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-secondary);"><i data-lucide="loader" class="spin"></i> Wczytywanie danych z chmury...</div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Modal Wyładowania (LightningMaps) -->
 <div id="lightning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; box-sizing: border-box;">
