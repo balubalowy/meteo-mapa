@@ -1,0 +1,134 @@
+/* styles.css - Meteo Standalone Map */
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-primary, #1C1C1E);
+    color: var(--text-primary, #EDEDED);
+    font-family: var(--font-sans, 'Inter', sans-serif);
+}
+
+.map-dashboard-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.map-sidebar {
+    width: 380px;
+    min-width: 340px;
+    height: 100%;
+    background: #121827;
+    border-right: 1px solid var(--border-subtle, #3A3A3C);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+}
+
+.map-sidebar.sidebar-collapsed {
+    transform: translateX(-100%);
+    position: absolute;
+}
+
+.map-sidebar::-webkit-scrollbar { width: 6px; }
+.map-sidebar::-webkit-scrollbar-track { background: #0f172a; }
+.map-sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+.map-sidebar::-webkit-scrollbar-thumb:hover { background: var(--accent-primary, #3b82f6); }
+
+.map-view-wrapper {
+    flex: 1;
+    height: 100%;
+    position: relative;
+    background: #0b0f19;
+}
+
+#premium-map {
+    width: 100%;
+    height: 100%;
+    background: #0b0f19;
+}
+
+.top-map-bar {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(18, 24, 39, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 6px 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--border-subtle, #3A3A3C);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+.btn-primary:hover { background: #1d4ed8; }
+
+.btn-ghost {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary, #EDEDED);
+    border-color: var(--border-subtle, #3A3A3C);
+}
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-primary, #3b82f6);
+}
+
+.form-select {
+    width: 100%;
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    outline: none;
+    font-family: inherit;
+}
+.form-select:focus { border-color: #3b82f6; }
+
+.layer-item-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.custom-city-label { pointer-events: none; }
+.station-val-label { pointer-events: none; }

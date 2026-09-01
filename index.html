@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>B-Meteo — Mapa Synoptyczna i Radarowa</title>
-  <meta name="description" content="Interaktywna mapa meteorologiczna na żywo: telemetria IMGW, ciśnienie SYNOP, radar opadów CMAX, satelita EUMETSAT, wyładowania Blitzortung i narzędzia synoptyczne.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22></text></svg>">
+  <title>B-Meteo - Mapa Synoptyczna i Radarowa</title>
+  <meta name="description" content="Interaktywna mapa meteorologiczna: telemetria IMGW, SYNOP QNH, radar CMAX, satelita EUMETSAT, wyładowania Blitzortung i narzędzia synoptyczne.">
   
-  <!-- Leaflet & Plugins CSS -->
+  <!-- CSS Dependencies -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
-  
-  <!-- App Styles -->
+  <link rel="stylesheet" href="css/bcore.css">
   <link rel="stylesheet" href="css/styles.css">
   
   <!-- Lucide Icons -->
@@ -21,91 +19,91 @@
 
   <div class="map-dashboard-container">
     
-    <!-- Pływający pasek górny -->
+    <!-- Top Floating Toolbar -->
     <div class="top-map-bar">
-      <button class="btn btn-ghost" onclick="toggleMapSidebar()" title="Pokaż / Ukryj panel boczny" aria-label="Przełącz panel boczny">
-        <i data-lucide="panel-left-close" id="sidebar-toggle-icon"></i> <span>Panel</span>
+      <button class="btn btn-ghost" onclick="window.toggleMapSidebar()" title="Przelacz panel boczny" aria-label="Panel boczny">
+        <i data-lucide="panel-left-close" id="sidebar-toggle-icon" style="width: 15px; height: 15px;"></i> <span>Panel</span>
       </button>
-      <button class="btn btn-ghost" onclick="toggleMapFullscreen()" id="map-fs-btn" title="Pełny ekran" aria-label="Włącz pełny ekran">
-        <i data-lucide="maximize"></i> <span id="map-fs-text">Pełny Ekran</span>
+      <button class="btn btn-ghost" onclick="window.toggleMapFullscreen()" id="map-fs-btn" title="Pelny ekran" aria-label="Pelny ekran">
+        <i data-lucide="maximize" style="width: 15px; height: 15px;"></i> <span id="map-fs-text">Pelny Ekran</span>
       </button>
-      <button class="btn btn-primary" onclick="renderIMGW()" title="Odśwież dane telemetryczne" aria-label="Odśwież dane">
-        <i data-lucide="refresh-cw"></i> <span>Odśwież</span>
+      <button class="btn btn-primary" onclick="window.renderIMGW()" title="Odswiez dane telemetryczne" aria-label="Odswiez dane">
+        <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i> <span>Odswiez</span>
       </button>
     </div>
 
     <!-- PANEL BOCZNY (SIDEBAR) -->
-    <aside id="map-sidebar" class="map-sidebar" aria-label="Panel boczny narzędzi synoptycznych">
+    <aside id="map-sidebar" class="map-sidebar" aria-label="Panel narzedzi synoptycznych">
       
-      <!-- Nagłówek -->
-      <div style="padding: 16px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
+      <!-- Naglowek -->
+      <div style="padding: 14px 16px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; background: #0f172a;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <i data-lucide="cloud-lightning" style="color: var(--accent-primary); width: 22px; height: 22px;"></i>
+          <i data-lucide="map" style="color: #3b82f6; width: 22px; height: 22px;"></i>
           <div>
-            <h1 style="margin: 0; font-size: 1.15rem; font-weight: 700;">B-<span>Meteo</span></h1>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Pulpit synoptyczny (Live)</div>
+            <h1 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #f8fafc;">B-Meteo <span style="font-weight: 400; color: #94a3b8; font-size: 0.85rem;">Pulpit</span></h1>
+            <div style="font-size: 0.72rem; color: #94a3b8;">Mapa synoptyczna i radarowa</div>
           </div>
         </div>
-        <div id="imgw-loading" style="display: none; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--accent-primary);">
+        <div id="imgw-loading" style="display: none; align-items: center; gap: 6px; font-size: 0.75rem; color: #3b82f6;">
           <i data-lucide="loader" class="spin" style="width: 14px; height: 14px;"></i>
         </div>
       </div>
 
-      <!-- SEKCJA 1: Radar i Satelita (Oś Czasu) -->
-      <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-          <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="cloud-rain" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Radar i Satelita</span>
-          <span style="font-size: 0.7rem; color: var(--accent-success); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(16,185,129,0.2);">Live</span>
+      <!-- SEKCJA 1: Radar i Satelita (Os Czasu) -->
+      <div style="padding: 14px; border-bottom: 1px solid #1e293b;">
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 10px; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+          <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="cloud-rain" style="width: 15px; height: 15px; color: #3b82f6;"></i> Radar i Satelita</span>
+          <span style="font-size: 0.68rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(16,185,129,0.2);">Live</span>
         </div>
         
-        <!-- Przełącznik Źródła Radaru -->
+        <!-- Przelacznik Zrodla Radaru -->
         <div style="display: flex; gap: 6px; margin-bottom: 10px;">
-          <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 5px 6px; font-size: 0.75rem;">IMGW CMAX (5 min)</button>
-          <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 5px 6px; font-size: 0.75rem;">RainViewer (Live)</button>
+          <button id="radar-src-imgw" class="btn btn-primary" onclick="window.setRadarSource('imgw')" style="flex: 1; padding: 5px 6px; font-size: 0.72rem;">IMGW CMAX (5 min)</button>
+          <button id="radar-src-rv" class="btn btn-ghost" onclick="window.setRadarSource('rv')" style="flex: 1; padding: 5px 6px; font-size: 0.72rem;">RainViewer (Live)</button>
         </div>
 
-        <!-- Oś Czasu i Odtwarzacz -->
-        <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-          <button id="rv-play-btn" class="btn btn-ghost" aria-label="Odtwórz animację radaru" style="padding: 6px; border-radius: 50%; color: var(--accent-primary);">
-            <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+        <!-- Os Czasu -->
+        <div style="display: flex; gap: 10px; align-items: center; background: #0f172a; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e293b;">
+          <button id="rv-play-btn" class="btn btn-ghost" aria-label="Odtworz animacje" style="padding: 5px; border-radius: 50%; color: #3b82f6;">
+            <i data-lucide="play" style="width: 15px; height: 15px;"></i>
           </button>
-          <span id="rv-time" style="font-family: monospace; font-size: 0.9rem; font-weight: bold; width: 55px; text-align: center;">--:--</span>
-          <input type="range" id="rv-slider" aria-label="Oś czasu radaru" min="0" max="11" value="11" style="flex: 1; accent-color: var(--accent-primary);">
+          <span id="rv-time" style="font-family: monospace; font-size: 0.88rem; font-weight: 700; width: 55px; text-align: center; color: #f8fafc;">--:--</span>
+          <input type="range" id="rv-slider" aria-label="Os czasu radaru" min="0" max="11" value="11" style="flex: 1; accent-color: #3b82f6; height: 4px;">
         </div>
       </div>
 
       <!-- SEKCJA 2: IMGW Telemetria & SYNOP -->
-      <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="thermometer" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> IMGW Telemetria & SYNOP
+      <div style="padding: 14px; border-bottom: 1px solid #1e293b;">
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 10px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="thermometer" style="width: 15px; height: 15px; color: #3b82f6;"></i> IMGW Telemetria & SYNOP
         </div>
         
         <div style="display: flex; flex-direction: column; gap: 10px;">
           <div>
-            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">Parametr pomiarowy:</label>
-            <select id="imgw-zmienna" class="form-select" onchange="renderIMGW()" aria-label="Wybór parametru">
+            <label style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; display: block;">Parametr pomiarowy:</label>
+            <select id="imgw-zmienna" class="form-select" onchange="window.renderIMGW()" aria-label="Wybor parametru">
               <option value="temp">Temperatura (°C)</option>
-              <option value="cisnienie">Ciśnienie (hPa - SYNOP)</option>
+              <option value="cisnienie">Cisnienie (hPa - SYNOP)</option>
               <option value="wiatr">Poryw Wiatru (km/h)</option>
-              <option value="wiatr_sr">Średnia Prędkość Wiatru (km/h)</option>
+              <option value="wiatr_sr">Srednia Predkosc Wiatru (km/h)</option>
               <option value="rosy">Punkt Rosy (°C)</option>
               <option value="lcl">Podstawa Chmur (LCL) [m]</option>
-              <option value="wilg">Wilgotność Względna (%)</option>
+              <option value="wilg">Wilgotnosc Wzgledna (%)</option>
               <option value="grunt">Temperatura Gruntu (°C)</option>
             </select>
           </div>
 
-          <!-- Opcje wyświetlania -->
-          <div style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 0.8rem; margin-bottom: 8px;">
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-iso" onchange="renderIMGW()" checked> Izolinie</label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
+          <!-- Opcje wyswietlania -->
+          <div style="background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #1e293b;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 0.78rem; margin-bottom: 8px;">
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-iso" onchange="window.renderIMGW()" checked> Izolinie</label>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-pt" onchange="window.renderIMGW()" checked> Punkty</label>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="chk-txt" onchange="window.renderIMGW()" checked> Wartosci</label>
             </div>
             
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
-              <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Krok izolinii:</label>
-              <select id="iso-step" class="form-select" onchange="renderIMGW()" aria-label="Krok izolinii" style="width: auto; padding: 2px 8px; font-size: 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid #1e293b; padding-top: 8px;">
+              <label style="font-size: 0.72rem; color: #94a3b8; margin: 0;">Krok izolinii:</label>
+              <select id="iso-step" class="form-select" onchange="window.renderIMGW()" aria-label="Krok izolinii" style="width: auto; padding: 2px 8px; font-size: 0.72rem;">
                 <option value="auto">Auto</option>
                 <option value="1">1 hPa / 1°</option>
                 <option value="2">2 hPa / 2°</option>
@@ -117,46 +115,44 @@
         </div>
       </div>
 
-      <!-- SEKCJA 3: Menedżer Warstw -->
-      <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="layers" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Menedżer Warstw (/ Z-Index)
+      <!-- SEKCJA 3: Menedzer Warstw -->
+      <div style="padding: 14px; border-bottom: 1px solid #1e293b;">
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="layers" style="width: 15px; height: 15px; color: #3b82f6;"></i> Menedzer Warstw
         </div>
         <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
       </div>
 
-      <!-- SEKCJA 4: Narzędzia Synoptyczne (Kreator) -->
-      <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="pen-tool" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Kreator Ostrzeżeń & Fronty
+      <!-- SEKCJA 4: Kreator Synoptyczny -->
+      <div style="padding: 14px; border-bottom: 1px solid #1e293b;">
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 10px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="pen-tool" style="width: 15px; height: 15px; color: #3b82f6;"></i> Kreator Ostrzezen & Fronty
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_chlodny')" style="font-size: 0.75rem; color: #3b82f6;"> Front Chłodny</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_cieply')" style="font-size: 0.75rem; color: #ef4444;"> Front Ciepły</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_zokludowany')" style="font-size: 0.75rem; color: #d946ef;"> Okluzja</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('zbieznosc')" style="font-size: 0.75rem; color: #f97316;">∿ Zbieżność</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('wyz')" style="font-size: 0.75rem; color: #3b82f6; font-weight: bold;">[ W ] Wyż</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('niz')" style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">[ N ] Niż</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('burza')" style="font-size: 0.75rem; color: #eab308;"> Burza</button>
-          <button class="btn btn-ghost" onclick="clearMap()" style="font-size: 0.75rem; color: var(--accent-danger);"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Wyczyść</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('front_chlodny')" style="font-size: 0.72rem; color: #3b82f6;">▲ Front Chlodny</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('front_cieply')" style="font-size: 0.72rem; color: #ef4444;">● Front Cieply</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('front_zokludowany')" style="font-size: 0.72rem; color: #d946ef;">▲● Okluzja</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('zbieznosc')" style="font-size: 0.72rem; color: #f97316;">∿ Zbieznosc</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('wyz')" style="font-size: 0.72rem; color: #3b82f6; font-weight: bold;">[ W ] Wyz</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('niz')" style="font-size: 0.72rem; color: #ef4444; font-weight: bold;">[ N ] Niz</button>
+          <button class="btn btn-ghost" onclick="window.setDrawingMode('burza')" style="font-size: 0.72rem; color: #eab308;">Burza</button>
+          <button class="btn btn-ghost" onclick="window.clearMap()" style="font-size: 0.72rem; color: #ef4444;"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Wyczysc</button>
         </div>
       </div>
 
     </aside>
 
-    <!-- KONTENER MAPY -->
+    <!-- MAP CONTAINER -->
     <main class="map-view-wrapper">
       <div id="premium-map"></div>
     </main>
 
   </div>
 
-  <!-- Leaflet & Plugins Scripts -->
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
-
-  <!-- Core Map Engine -->
   <script src="js/mapa.js"></script>
 </body>
 </html>
