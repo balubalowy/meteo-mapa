@@ -280,9 +280,7 @@ window.initMapa = function() {
             maxZoom: 16, pane: 'basePane', attribution: '© Esri' 
         });
         
-        const lightBase = L.tileLayer('https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png', { 
-            maxZoom: 19, pane: 'basePane', attribution: '© CartoDB / OSM' 
-        });
+        const lightBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, pane: 'basePane', attribution: '© Esri' });
 
         // Własna warstwa z głównymi miastami
         const majorCities = [
