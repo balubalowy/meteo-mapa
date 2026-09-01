@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>B-Meteo — Mapa Synoptyczna i Radarowa</title>
   <meta name="description" content="Interaktywna mapa meteorologiczna na żywo: telemetria IMGW, ciśnienie SYNOP, radar opadów CMAX, satelita EUMETSAT, wyładowania Blitzortung i narzędzia synoptyczne.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22></text></svg>">
   
   <!-- Leaflet & Plugins CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -120,7 +120,7 @@
       <!-- SEKCJA 3: Menedżer Warstw -->
       <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
         <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="layers" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Menedżer Warstw (▲/▼ Z-Index)
+          <i data-lucide="layers" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Menedżer Warstw (/ Z-Index)
         </div>
         <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
       </div>
@@ -131,13 +131,13 @@
           <i data-lucide="pen-tool" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Kreator Ostrzeżeń & Fronty
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_chlodny')" style="font-size: 0.75rem; color: #3b82f6;">▲ Front Chłodny</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_cieply')" style="font-size: 0.75rem; color: #ef4444;">● Front Ciepły</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('front_zokludowany')" style="font-size: 0.75rem; color: #d946ef;">▲● Okluzja</button>
+          <button class="btn btn-ghost" onclick="setDrawingMode('front_chlodny')" style="font-size: 0.75rem; color: #3b82f6;"> Front Chłodny</button>
+          <button class="btn btn-ghost" onclick="setDrawingMode('front_cieply')" style="font-size: 0.75rem; color: #ef4444;"> Front Ciepły</button>
+          <button class="btn btn-ghost" onclick="setDrawingMode('front_zokludowany')" style="font-size: 0.75rem; color: #d946ef;"> Okluzja</button>
           <button class="btn btn-ghost" onclick="setDrawingMode('zbieznosc')" style="font-size: 0.75rem; color: #f97316;">∿ Zbieżność</button>
           <button class="btn btn-ghost" onclick="setDrawingMode('wyz')" style="font-size: 0.75rem; color: #3b82f6; font-weight: bold;">[ W ] Wyż</button>
           <button class="btn btn-ghost" onclick="setDrawingMode('niz')" style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">[ N ] Niż</button>
-          <button class="btn btn-ghost" onclick="setDrawingMode('burza')" style="font-size: 0.75rem; color: #eab308;">☈ Burza</button>
+          <button class="btn btn-ghost" onclick="setDrawingMode('burza')" style="font-size: 0.75rem; color: #eab308;"> Burza</button>
           <button class="btn btn-ghost" onclick="clearMap()" style="font-size: 0.75rem; color: var(--accent-danger);"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Wyczyść</button>
         </div>
       </div>

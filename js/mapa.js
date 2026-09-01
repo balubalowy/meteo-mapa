@@ -423,8 +423,8 @@ function initLayers() {
                         <input type="checkbox" ${item.visible ? 'checked' : ''} onchange="toggleLayer('${key}', this.checked)"> ${item.name}
                     </label>
                     <div style="display:flex;gap:3px;">
-                        <button class="btn btn-ghost" style="padding:1px 5px;font-size:0.7rem;" onclick="moveLayer('${key}', 'up')" ${isTop ? 'disabled style="opacity:0.3"' : ''}>▲</button>
-                        <button class="btn btn-ghost" style="padding:1px 5px;font-size:0.7rem;" onclick="moveLayer('${key}', 'down')" ${isBottom ? 'disabled style="opacity:0.3"' : ''}>▼</button>
+                        <button class="btn btn-ghost" style="padding:1px 5px;font-size:0.7rem;" onclick="moveLayer('${key}', 'up')" ${isTop ? 'disabled style="opacity:0.3"' : ''}></button>
+                        <button class="btn btn-ghost" style="padding:1px 5px;font-size:0.7rem;" onclick="moveLayer('${key}', 'down')" ${isBottom ? 'disabled style="opacity:0.3"' : ''}></button>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;color:var(--text-muted);">

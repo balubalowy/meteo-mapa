@@ -1,4 +1,4 @@
-# B-Meteo — Standalone Weather Map ⚡
+# B-Meteo — Standalone Weather Map 
 
 W pełni funkcjonalna, samodzielna i otwarta interaktywna mapa meteorologiczna na żywo. Działa w 100% statycznie (HTML/CSS/JS) bez backendu i bez wymagań kluczy API.
 
