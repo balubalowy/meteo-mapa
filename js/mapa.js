@@ -391,7 +391,8 @@ window.initMapa = function() {
         let activeRadarSource = 'imgw'; // Domyślnie oficjalny polski radar IMGW CMAX!
         let radarTileLayer = null, radarHost = '', radarFrames = [], currentFrame = 0, animationTimer = null;
         let imgwRadarOverlay = null, imgwFrames = [];
-        const IMGW_RADAR_BOUNDS = [[48.0, 13.5], [56.0, 24.5]];
+        // Precyzyjnie skalibrowany Bounding Box z metadanych HDF5 POLRAD POLCOMP (+proj=aeqd)
+        const IMGW_RADAR_BOUNDS = [[48.2985, 12.4411], [56.3277, 25.6641]];
 
         function generateImgwRadarFrames() {
             const now = new Date();
