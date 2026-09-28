@@ -25,7 +25,10 @@
     <div id="map-sidebar" class="map-sidebar">
         
         <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
-            <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
+                <span id="map-delay-badge" style="display: inline-flex; align-items: center; font-size: 0.72rem; padding: 2px 7px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-secondary); font-weight: 600;" title="Oczekiwanie na dane...">-- min</span>
+            </div>
             <button class="btn btn-ghost mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 8px;" title="Zamknij panel" aria-label="Zamknij panel">
                 <i data-lucide="x" style="width: 18px; height: 18px;"></i>
             </button>

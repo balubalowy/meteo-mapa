@@ -1091,6 +1091,45 @@ window.initMapa = function() {
         });
 
         // ----------------------------------------------------
+        // WSKAŹNIK OPÓŹNIENIA DANYCH METEOROLOGICZNYCH (Live Lag Badge)
+        // ----------------------------------------------------
+        function updateDelayBadge(latestTimeMs) {
+            const badge = document.getElementById('map-delay-badge');
+            if (!badge || !latestTimeMs) return;
+
+            const now = Date.now();
+            const diffMs = Math.max(0, now - latestTimeMs);
+            const diffMin = Math.round(diffMs / 60000);
+
+            let color = '#22c55e';
+            let bg = 'rgba(34, 197, 94, 0.12)';
+            let border = 'rgba(34, 197, 94, 0.35)';
+
+            if (diffMin > 45) {
+                color = '#ef4444';
+                bg = 'rgba(239, 68, 68, 0.12)';
+                border = 'rgba(239, 68, 68, 0.35)';
+            } else if (diffMin > 20) {
+                color = '#eab308';
+                bg = 'rgba(234, 179, 8, 0.12)';
+                border = 'rgba(234, 179, 8, 0.35)';
+            }
+
+            const localTime = new Date(latestTimeMs).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            badge.textContent = `opóźnienie: ${diffMin} min`;
+            badge.style.color = color;
+            badge.style.background = bg;
+            badge.style.borderColor = border;
+            badge.title = `Najświeższy pomiar IMGW: ${localTime} (opóźnienie: ${diffMin} min)`;
+        }
+
+        setInterval(() => {
+            if (window.latestMeasurementTimeMs) {
+                updateDelayBadge(window.latestMeasurementTimeMs);
+            }
+        }, 30000);
+
+        // ----------------------------------------------------
         // IMGW DATA (Firebase + IDW Interpolation)
         // ----------------------------------------------------
         let imgwData = null;
@@ -2084,6 +2123,41 @@ window.initMapa = function() {
                     reqSnow,
                     reqModel
                 ]);
+
+                // Obliczanie czasu najbardziej aktualnego pomiaru dla wskaźnika opóźnienia
+                let maxMeteoTimeMs = 0;
+                if (Array.isArray(rawData)) {
+                    for (const st of rawData) {
+                        const dStr = st.temperatura_powietrza_data || st.temperatura_gruntu_data || st.wiatr_srednia_predkosc_data;
+                        if (!dStr) continue;
+                        const parts = dStr.split(/[- :]/);
+                        if (parts.length >= 6) {
+                            const timeMs = Date.UTC(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
+                            if (timeMs > maxMeteoTimeMs) {
+                                maxMeteoTimeMs = timeMs;
+                            }
+                        }
+                    }
+                }
+                if (Array.isArray(synopData)) {
+                    for (const st of synopData) {
+                        if (st.data_pomiaru && st.godzina_pomiaru) {
+                            const parts = st.data_pomiaru.split('-');
+                            if (parts.length === 3) {
+                                const hour = parseInt(st.godzina_pomiaru, 10);
+                                const timeMs = Date.UTC(parts[0], parts[1]-1, parts[2], hour, 0, 0);
+                                if (timeMs > maxMeteoTimeMs) {
+                                    maxMeteoTimeMs = timeMs;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (maxMeteoTimeMs > 0) {
+                    window.latestMeasurementTimeMs = maxMeteoTimeMs;
+                    updateDelayBadge(maxMeteoTimeMs);
+                }
                 
                 const dataObj = {
                     'temp': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
