@@ -1252,7 +1252,7 @@ window.initMapa = function() {
             "lcl":              { "nazwa": "LCL", "cscale": DEFAULT_LCL_COLORSCALE, "cmin": 0, "cmax": 3000, "unit": "m", "step": 250.0 },
             "wiatr_sr":         { "nazwa": "Prędkość Wiatru", "cscale": DEFAULT_WIND_COLORSCALE, "cmin": 0, "cmax": 259, "unit": "km/h", "step": 10.0 },
             "wiatr":            { "nazwa": "Porywy Wiatru", "cscale": DEFAULT_WIND_COLORSCALE, "cmin": 0, "cmax": 259, "unit": "km/h", "step": 10.0 },
-            "cisnienie":        { "nazwa": "Ciśnienie", "cscale": DEFAULT_PRESSURE_COLORSCALE, "cmin": 980, "cmax": 1040, "unit": "hPa", "step": 2.0 },
+            "cisnienie":        { "nazwa": "Ciśnienie QFF", "cscale": DEFAULT_PRESSURE_COLORSCALE, "cmin": 980, "cmax": 1040, "unit": "hPa", "step": 2.0 },
             "snieg":            { "nazwa": "Pokrywa Śnieżna", "cscale": DEFAULT_SNOW_COLORSCALE, "cmin": 0, "cmax": 100, "unit": "cm", "step": 5.0 },
             "snieg_swiezy":     { "nazwa": "Świeży Śnieg", "cscale": DEFAULT_SNOW_COLORSCALE, "cmin": 0, "cmax": 50, "unit": "cm", "step": 2.0 }
         };
@@ -2118,9 +2118,7 @@ window.initMapa = function() {
                             `<b style="font-size:0.85rem;">${sName}</b>` +
                             `<span class="badge-odczyt">ODCZYT</span>` +
                             `</div>` +
-                            `Ciśnienie (QNH): <b>${pVal.toFixed(1)} hPa</b>${timeLabel}<br>` +
-                            `Temperatura: ${sTemp || '-'}°C, Wilgotność: ${sRh || '-'}%<br>` +
-                            `Wiatr: ${sWind || '-'} m/s (${st.kierunek_wiatru || '-'}°)`
+                            `QFF: <b>${pVal.toFixed(1)} hPa</b>${timeLabel}`
                         );
                         dataObj['cisnienie'].pt_foreign.push(false);
                         dataObj['cisnienie'].pt_types.push('ODCZYT');
@@ -2212,13 +2210,13 @@ window.initMapa = function() {
                             }
                         };
 
-                        addData('temp', temp, temp?.toFixed(1) + '°', `Temperatura: ${temp?.toFixed(1)}°C${formatTime(temp_t)}`, undefined, temp_t);
-                        addData('grunt', temp_grunt, temp_grunt?.toFixed(1) + '°', `Temp. Gruntu: ${temp_grunt?.toFixed(1)}°C${formatTime(grunt_t)}`, undefined, grunt_t);
-                        addData('wilg', wilg, wilg?.toFixed(0) + '%', `Wilgotność: ${wilg?.toFixed(0)}%${formatTime(wilg_t)}`, undefined, wilg_t);
-                        addData('rosy', dewPoint, dewPoint?.toFixed(1) + '°', `Punkt Rosy: ${dewPoint?.toFixed(1)}°C${formatTime(temp_t)}`, undefined, temp_t);
-                        addData('lcl', lcl_m, !isNaN(lcl_m) ? (lcl_m + 'm') : '', `Podstawa Chmur (LCL): <b>${lcl_m} m n.p.g.</b><br>Temperatura: ${temp?.toFixed(1)}°C, Punkt Rosy: ${dewPoint?.toFixed(1)}°C${formatTime(temp_t)}`, undefined, temp_t);
-                        addData('wiatr', wiatr_poryw_kmh, wiatr_poryw_kmh?.toFixed(0), `Poryw Wiatru: ${wiatr_poryw_kmh?.toFixed(0)} km/h${formatTime(wiatr_por_t)}`, wiatr_kier, wiatr_por_t);
-                        addData('wiatr_sr', wiatr_sr_kmh, wiatr_sr_kmh?.toFixed(0), `Wiatr (Śr): ${wiatr_sr_kmh?.toFixed(0)} km/h${formatTime(wiatr_sr_t)}`, wiatr_kier, wiatr_sr_t);
+                        addData('temp', temp, temp?.toFixed(1) + '°', `T2m: <b>${temp?.toFixed(1)}°C</b>${formatTime(temp_t)}`, undefined, temp_t);
+                        addData('grunt', temp_grunt, temp_grunt?.toFixed(1) + '°', `T5cm: <b>${temp_grunt?.toFixed(1)}°C</b>${formatTime(grunt_t)}`, undefined, grunt_t);
+                        addData('wilg', wilg, wilg?.toFixed(0) + '%', `RH: <b>${wilg?.toFixed(0)}%</b>${formatTime(wilg_t)}`, undefined, wilg_t);
+                        addData('rosy', dewPoint, dewPoint?.toFixed(1) + '°', `Td: <b>${dewPoint?.toFixed(1)}°C</b>${formatTime(temp_t)}`, undefined, temp_t);
+                        addData('lcl', lcl_m, !isNaN(lcl_m) ? (lcl_m + 'm') : '', `LCL: <b>${lcl_m} m n.p.g.</b>${formatTime(temp_t)}<br>T2m: ${temp?.toFixed(1)}°C, Td: ${dewPoint?.toFixed(1)}°C`, undefined, temp_t);
+                        addData('wiatr', wiatr_poryw_kmh, wiatr_poryw_kmh?.toFixed(0), `Maks. Wiatr: <b>${wiatr_poryw_kmh?.toFixed(0)} km/h</b>${formatTime(wiatr_por_t)}`, wiatr_kier, wiatr_por_t);
+                        addData('wiatr_sr', wiatr_sr_kmh, wiatr_sr_kmh?.toFixed(0), `Śr. Wiatr: <b>${wiatr_sr_kmh?.toFixed(0)} km/h</b>${formatTime(wiatr_sr_t)}`, wiatr_kier, wiatr_sr_t);
                         
 
                     }
@@ -2275,13 +2273,13 @@ window.initMapa = function() {
                             }
                         };
 
-                        if (!isNaN(temp)) addAsosPoint('temp', temp, temp.toFixed(1) + '°', `Temperatura: ${temp.toFixed(1)}°C${timeLabel}`);
-                        if (!isNaN(pMsl)) addAsosPoint('cisnienie', pMsl, pMsl.toFixed(1), `Ciśnienie (QNH): <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-                        if (!isNaN(rh)) addAsosPoint('wilg', rh, rh.toFixed(0) + '%', `Wilgotność: ${rh.toFixed(0)}%${timeLabel}`);
-                        if (!isNaN(dp)) addAsosPoint('rosy', dp, dp.toFixed(1) + '°', `Punkt Rosy: ${dp.toFixed(1)}°C${timeLabel}`);
-                        if (!isNaN(lcl_m)) addAsosPoint('lcl', lcl_m, lcl_m + 'm', `Podstawa Chmur (LCL): <b>${lcl_m} m n.p.g.</b><br>Temp: ${temp.toFixed(1)}°C, Punkt Rosy: ${dp.toFixed(1)}°C`);
-                        if (!isNaN(wGust)) addAsosPoint('wiatr', wGust, wGust.toFixed(0), `Poryw Wiatru: ${wGust.toFixed(0)} km/h${timeLabel}`, wDir);
-                        if (!isNaN(wSpd)) addAsosPoint('wiatr_sr', wSpd, wSpd.toFixed(0), `Wiatr (Śr): ${wSpd.toFixed(0)} km/h${timeLabel}`, wDir);
+                        if (!isNaN(temp)) addAsosPoint('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
+                        if (!isNaN(pMsl)) addAsosPoint('cisnienie', pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
+                        if (!isNaN(rh)) addAsosPoint('wilg', rh, rh.toFixed(0) + '%', `RH: <b>${rh.toFixed(0)}%</b>${timeLabel}`);
+                        if (!isNaN(dp)) addAsosPoint('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
+                        if (!isNaN(lcl_m)) addAsosPoint('lcl', lcl_m, lcl_m + 'm', `LCL: <b>${lcl_m} m n.p.g.</b>${timeLabel}<br>T2m: ${temp.toFixed(1)}°C, Td: ${dp.toFixed(1)}°C`);
+                        if (!isNaN(wGust)) addAsosPoint('wiatr', wGust, wGust.toFixed(0), `Maks. Wiatr: <b>${wGust.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+                        if (!isNaN(wSpd)) addAsosPoint('wiatr_sr', wSpd, wSpd.toFixed(0), `Śr. Wiatr: <b>${wSpd.toFixed(0)} km/h</b>${timeLabel}`, wDir);
 
 
                     }
@@ -2381,24 +2379,25 @@ window.initMapa = function() {
                                 }
                             };
 
-                            if (!isNaN(temp)) addModelPoint('temp', temp, temp.toFixed(1) + '°', `Temperatura (Model): ${temp.toFixed(1)}°C${timeLabel}`);
-                            if (!isNaN(pMsl)) addModelPoint('cisnienie', pMsl, pMsl.toFixed(1), `Ciśnienie MSL (Model): <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-                            if (!isNaN(rh)) addModelPoint('wilg', rh, rh.toFixed(0) + '%', `Wilgotność (Model): ${rh.toFixed(0)}%${timeLabel}`);
-                            if (!isNaN(dp)) addModelPoint('rosy', dp, dp.toFixed(1) + '°', `Punkt Rosy (Model): ${dp.toFixed(1)}°C${timeLabel}`);
-                            if (!isNaN(lcl_m)) addModelPoint('lcl', lcl_m, lcl_m + 'm', `Podstawa Chmur LCL (Model): <b>${lcl_m} m n.p.g.</b><br>Temp: ${temp.toFixed(1)}°C, Punkt Rosy: ${dp.toFixed(1)}°C`);
-                            if (!isNaN(wGust)) addModelPoint('wiatr', wGust, wGust.toFixed(0), `Poryw Wiatru (Model): ${wGust.toFixed(0)} km/h${timeLabel}`, wDir);
-                            if (!isNaN(wSpd)) addModelPoint('wiatr_sr', wSpd, wSpd.toFixed(0), `Wiatr Śr (Model): ${wSpd.toFixed(0)} km/h${timeLabel}`, wDir);
+                            if (!isNaN(temp)) addModelPoint('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
+                            if (!isNaN(pMsl)) addModelPoint('cisnienie', pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
+                            if (!isNaN(rh)) addModelPoint('wilg', rh, rh.toFixed(0) + '%', `RH: <b>${rh.toFixed(0)}%</b>${timeLabel}`);
+                            if (!isNaN(dp)) addModelPoint('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
+                            if (!isNaN(lcl_m)) addModelPoint('lcl', lcl_m, lcl_m + 'm', `LCL: <b>${lcl_m} m n.p.g.</b>${timeLabel}<br>T2m: ${temp.toFixed(1)}°C, Td: ${dp.toFixed(1)}°C`);
+                            if (!isNaN(wGust)) addModelPoint('wiatr', wGust, wGust.toFixed(0), `Maks. Wiatr: <b>${wGust.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+                            if (!isNaN(wSpd)) addModelPoint('wiatr_sr', wSpd, wSpd.toFixed(0), `Śr. Wiatr: <b>${wSpd.toFixed(0)} km/h</b>${timeLabel}`, wDir);
 
                             // Temperatura gruntu (-6 cm)
                             const tSoil = typeof cur.soil_temperature_6cm === 'number' ? cur.soil_temperature_6cm : NaN;
-                            if (!isNaN(tSoil)) addModelPoint('grunt', tSoil, tSoil.toFixed(1) + '°', `Temperatura gruntu -6cm (Model): <b>${tSoil.toFixed(1)}°C</b>${timeLabel}`);
+                            if (!isNaN(tSoil)) addModelPoint('grunt', tSoil, tSoil.toFixed(1) + '°', `T5cm: <b>${tSoil.toFixed(1)}°C</b>${timeLabel}`);
 
                             // Pokrywa śnieżna i świeży śnieg z modelu numerycznego
                             const snowVal = typeof cur.snow_depth === 'number' ? Math.round(cur.snow_depth * 100 * 10) / 10 : NaN;
-                            if (!isNaN(snowVal)) addModelPoint('snieg', snowVal, `${Math.round(snowVal)}cm`, `Pokrywa śnieżna (Model): <b>${snowVal.toFixed(1)} cm</b>${timeLabel}`);
-
                             const freshVal = typeof cur.snowfall === 'number' ? Math.round(cur.snowfall * 10) / 10 : NaN;
-                            if (!isNaN(freshVal)) addModelPoint('snieg_swiezy', freshVal, `${Math.round(freshVal)}cm`, `Świeżo spadły śnieg (Model): <b>${freshVal.toFixed(1)} cm</b>${timeLabel}`);
+                            const modelSnowHov = `Pokrywa śnieżna: <b>${!isNaN(snowVal) ? snowVal.toFixed(1) + ' cm' : '-'}</b>${timeLabel}<br>Świeży śnieg: <b>${!isNaN(freshVal) ? freshVal.toFixed(1) + ' cm' : '-'}</b>`;
+
+                            if (!isNaN(snowVal)) addModelPoint('snieg', snowVal, `${Math.round(snowVal)}cm`, modelSnowHov);
+                            if (!isNaN(freshVal)) addModelPoint('snieg_swiezy', freshVal, `${Math.round(freshVal)}cm`, modelSnowHov);
                         }
                     };
 
