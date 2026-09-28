@@ -29,18 +29,15 @@
             <h2 style="margin: 0; font-size: 1.1rem;">Wielki Pulpit</h2>
         </div>
 
-        <!-- SEKCJA: Radar i Wyładowania -->
+        <!-- SEKCJA: Radar -->
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="cloud-rain" style="width: 16px; height: 16px;"></i> Radar Opadów</span>
-                <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 0.75rem; border: 1px solid var(--accent-primary); color: var(--accent-primary);" onclick="document.getElementById('lightning-modal').style.display='block'">
-                    <i data-lucide="zap" style="width: 12px; height: 12px;"></i> Pioruny (Live)
-                </button>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="cloud-rain" style="width: 16px; height: 16px;"></i> Radar
             </div>
-            <!-- Przełącznik Źródła Radaru -->
+            <!-- Przełącznik źródła radaru -->
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">IMGW CMAX (5 min)</button>
-                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">RainViewer (Live)</button>
+                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">IMGW</button>
+                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">RainViewer</button>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
@@ -58,29 +55,53 @@
                 <i data-lucide="thermometer" style="width: 16px; height: 16px;"></i> IMGW
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">ŹRÓDŁO:</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">ODCZYT</span>
+                        <label class="toggle-switch" style="margin: 0;" title="Przełącznik źródła: ODCZYT (tylko stacje) / MODEL (stacje + model DWD ICON)">
+                            <input type="checkbox" id="chk-source-model" onchange="renderIMGW()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span style="font-size: 0.72rem; color: var(--accent-primary); font-weight: 600;">MODEL</span>
+                    </div>
+                </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary);">Parametr:</label>
                     <select id="imgw-zmienna" class="form-select" aria-label="Wybór parametru meteorologicznego IMGW" onchange="renderIMGW()" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
                         <option value="temp">Temperatura (°C)</option>
-                        <option value="cisnienie">Ciśnienie (hPa - SYNOP)</option>
-                        <option value="wiatr">Wiatr Porywy (km/h)</option>
-                        <option value="rosy">Punkt Rosy (°C)</option>
-                        <option value="lcl">Podstawa Chmur (LCL) [m]</option>
-                        <option value="wilg">Wilgotność (%)</option>
                         <option value="grunt">Temperatura Gruntu (°C)</option>
-                        <option value="wiatr_sr">Średnia Prędkość Wiatru (km/h)</option>
-                        <option value="synop">Model Synoptyczny (Wszystko)</option>
+                        <option value="rosy">Punkt Rosy (°C)</option>
+                        <option value="wilg">Wilgotność (%)</option>
+                        <option value="lcl">LCL (m)</option>
+                        <option value="wiatr_sr">Prędkość Wiatru (km/h)</option>
+                        <option value="wiatr">Porywy Wiatru (km/h)</option>
+                        <option value="cisnienie">Ciśnienie (hPa)</option>
+                        <option value="snieg">Pokrywa Śnieżna (cm)</option>
+                        <option value="snieg_swiezy">Świeży Śnieg (cm)</option>
                     </select>
                 </div>
-
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 3px; display: block;">Horyzont:</label>
+                    <select id="imgw-okres" class="form-select" aria-label="Horyzont czasowy obserwacji IMGW" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
+                        <option value="now" selected>Teraz</option>
+                        <option value="trend1h" disabled title="Wymaga bazy danych">Trend 1h</option>
+                        <option value="trend2h" disabled title="Wymaga bazy danych">Trend 2h</option>
+                        <option value="trend3h" disabled title="Wymaga bazy danych">Trend 3h</option>
+                        <option value="trend5h" disabled title="Wymaga bazy danych">Trend 5h</option>
+                        <option value="max5" disabled title="Wymaga bazy danych">Maks. 5h</option>
+                        <option value="min5" disabled title="Wymaga bazy danych">Min. 5h</option>
+                    </select>
+                </div>
                 
                 <!-- Szczegóły Wyświetlania IMGW -->
                 <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-top: 5px;">
-                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 5px; display: block;">Warstwy:</label>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 5px; display: block;">Elementy mapy:</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem;">
                         <label><input type="checkbox" id="chk-iso" onchange="renderIMGW()"> Izolinie</label>
                         <label><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
                         <label><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
+                        <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()" checked> Zagranica</label>
                     </div>
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                         <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0; white-space: nowrap;">Krok izolinii:</label>
@@ -109,53 +130,50 @@
             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="layers" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Warstwy</span>
             </div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">Kolejność (/):</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">Kolejność:</div>
             
             <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;">
                 <!-- Generowane dynamicznie przez JS -->
             </div>
         </div>
 
-        <!-- SEKCJA: Kreator Ostrzeżeń -->
+        <!-- SEKCJA: Rysowanie -->
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Kreator ostrzeżeń
+                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Rysowanie
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                     <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 4px;" onclick="if(window.premiumMap) window.premiumMap.setView([52.069, 19.480], 6);">Polska</button>
-                     <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 4px;" onclick="if(window.premiumMap) window.premiumMap.setView([49.5, 17.5], 5);">Europa Śr.</button>
-                </div>
-                <hr style="border-color: var(--border-subtle); margin: 5px 0;">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Strefy:</div>
-                <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; text-align: left; padding: 6px; font-size: 0.8rem;" onclick="setDrawingColor('#22c55e')">MRG (1)</button>
-                <button class="btn btn-ghost" style="border: 1px solid #eab308; color: #eab308; text-align: left; padding: 6px; font-size: 0.8rem;" onclick="setDrawingColor('#eab308')">NWL (2)</button>
-                <button class="btn btn-ghost" style="border: 1px solid #f97316; color: #f97316; text-align: left; padding: 6px; font-size: 0.8rem;" onclick="setDrawingColor('#f97316')">SRD (3)</button>
-                <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; text-align: left; padding: 6px; font-size: 0.8rem;" onclick="setDrawingColor('#ef4444')">DZ (4)</button>
-                <button class="btn btn-ghost" style="border: 1px solid #d946ef; color: #d946ef; text-align: left; padding: 6px; font-size: 0.8rem;" onclick="setDrawingColor('#d946ef')">EXT (5)</button>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+                    <button class="btn btn-ghost" style="border: 2px solid #22c55e; color: #22c55e; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#22c55e')" title="MRG (1) - Marginalne">1</button>
+                    <button class="btn btn-ghost" style="border: 2px solid #eab308; color: #eab308; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#eab308')" title="NWL (2) - Niewielkie">2</button>
+                    <button class="btn btn-ghost" style="border: 2px solid #f97316; color: #f97316; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#f97316')" title="SRD (3) - Średnie">3</button>
+                    <button class="btn btn-ghost" style="border: 2px solid #ef4444; color: #ef4444; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#ef4444')" title="DZ (4) - Duże">4</button>
+                    <button class="btn btn-ghost" style="border: 2px solid #d946ef; color: #d946ef; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#d946ef')" title="EXT (5) - Ekstremalne">5</button>
+                </div>
                 
                 <hr style="border-color: var(--border-subtle); margin: 5px 0;">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Fronty i linie:</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                    <button class="btn btn-ghost" style="border: 1px solid #f97316; color: #f97316; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('zbieznosc')">Zbieżność</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('front_chlodny')">Fr. Chłodny</button>
-                    <button class="btn btn-ghost" style="border: 1px dashed #3b82f6; color: #3b82f6; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('front_chlodny_2')">Fr. Chłodny II</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('front_cieply')">Fr. Ciepły</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #d946ef; color: #d946ef; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('front_zokludowany')">Fr. Zokludowany</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #a8a29e; color: #a8a29e; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('strzalka')">Strzałka</button>
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
+                    <button class="btn btn-ghost" style="border: 1px solid #f97316; color: #f97316; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('zbieznosc')" title="Zbieżność"><i data-lucide="git-commit" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_chlodny')" title="Front chłodny"><i data-lucide="triangle" style="width: 14px; height: 14px; transform: rotate(180deg);"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px dashed #3b82f6; color: #3b82f6; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_chlodny_2')" title="Front chłodny II (przerywany)"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_cieply')" title="Front ciepły"><i data-lucide="circle-dot" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #d946ef; color: #d946ef; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_zokludowany')" title="Front zokludowany"><i data-lucide="disc" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #a8a29e; color: #a8a29e; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('strzalka')" title="Strzałka"><i data-lucide="arrow-up-right" style="width: 14px; height: 14px;"></i></button>
                 </div>
                 
                 <hr style="border-color: var(--border-subtle); margin: 5px 0;">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Zjawiska:</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 4px; font-size: 0.75rem; font-weight: bold;" onclick="setDrawingMode('wyz')">W (Wyż)</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 4px; font-size: 0.75rem; font-weight: bold;" onclick="setDrawingMode('niz')">N (Niż)</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('burza')">Burza</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('deszcz')">Deszcz</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('snieg')">Śnieg</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #eab308; color: #eab308; padding: 4px; font-size: 0.75rem;" onclick="setDrawingMode('mgla')">Mgła</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 4px; font-size: 0.75rem; grid-column: span 3;" onclick="setDrawingMode('kolko')">Strefa (Kółko)</button>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 5px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingMode('wyz')" title="Wyż (W)">W</button>
+                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 5px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingMode('niz')" title="Niż (N)">N</button>
+                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('burza')" title="Burza"><i data-lucide="zap" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('deszcz')" title="Deszcz"><i data-lucide="cloud-rain" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('snieg')" title="Śnieg"><i data-lucide="snowflake" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #eab308; color: #eab308; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('mgla')" title="Mgła"><i data-lucide="cloud-fog" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('kolko')" title="Strefa (kółko)"><i data-lucide="circle" style="width: 14px; height: 14px;"></i></button>
                 </div>
                 
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
@@ -259,6 +277,9 @@
   <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   
+  <!-- Moduł pokrywy śnieżnej IMGW -->
+  <script src="js/snow.js"></script>
+
   <!-- Core Standalone Map Engine -->
   <script src="js/mapa.js"></script>
 </body>
