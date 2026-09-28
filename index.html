@@ -102,15 +102,19 @@
                         <label><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
                         <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()" checked> Zagranica</label>
                     </div>
-                    <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0; white-space: nowrap;">Krok izolinii:</label>
-                        <select id="iso-step" class="form-select" aria-label="Krok izolinii interpolacji IDW" onchange="window.renderIMGW()" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background-color: var(--bg-tertiary); border: 1px solid var(--border-subtle); color: var(--text-primary); width: auto;">
-                            <option value="auto">Auto</option>
-                            <option value="1">1 jedn.</option>
-                            <option value="2">2 jedn.</option>
-                            <option value="5">5 jedn.</option>
-                            <option value="10">10 jedn.</option>
-                        </select>
+                    <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Krok izolinii:</label>
+                            <span id="iso-step-val" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-primary);">Auto</span>
+                        </div>
+                        <input type="range" id="iso-step" min="0" max="12" value="0" step="1" aria-label="Krok izolinii interpolacji IDW" oninput="window.updateIsoStepLabel(this.value)" onchange="window.renderIMGW()" style="width: 100%; accent-color: var(--accent-primary); cursor: pointer; margin: 2px 0;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); padding: 0 2px;">
+                            <span>Auto</span>
+                            <span>10</span>
+                            <span>50</span>
+                            <span>200</span>
+                            <span>1000</span>
+                        </div>
                     </div>
                     <div style="margin-top: 6px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
                         <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Kolor Punktów:</label>

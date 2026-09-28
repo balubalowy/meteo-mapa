@@ -2425,10 +2425,33 @@ window.initMapa = function() {
             }
         }
 
+        const ISO_STEPS = ['auto', 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 500, 1000];
+
+        window.updateIsoStepLabel = function(sliderVal) {
+            const idx = parseInt(sliderVal, 10);
+            const step = ISO_STEPS[idx] ?? 'auto';
+            const labelEl = document.getElementById('iso-step-val');
+            if (labelEl) {
+                if (step === 'auto') {
+                    const zEl = document.getElementById('imgw-zmienna');
+                    const curZ = zEl ? zEl.value : 'temp';
+                    const defStep = (DEFAULT_ZMIENNE[curZ] && DEFAULT_ZMIENNE[curZ].step) ? DEFAULT_ZMIENNE[curZ].step : 2;
+                    labelEl.textContent = `Auto (${defStep})`;
+                } else {
+                    labelEl.textContent = `${step}`;
+                }
+            }
+        };
+
         window.renderIMGW = async function() {
             const okres = 'now';
             const zmienna = document.getElementById('imgw-zmienna').value;
             const loadingEl = document.getElementById('imgw-loading');
+            
+            const isoSlider = document.getElementById('iso-step');
+            if (isoSlider && parseInt(isoSlider.value, 10) === 0) {
+                window.updateIsoStepLabel(0);
+            }
             
             let data = null;
             const liveDataObj = await getIMGWLiveData();
@@ -2537,9 +2560,14 @@ window.initMapa = function() {
             }
             
             if(data.pt_lats && data.pt_lats.length > 5 && showInter) {
-                const isoStepInput = document.getElementById('iso-step') ? document.getElementById('iso-step').value : 'auto';
-                let stepVal = (isoStepInput !== 'auto') ? parseFloat(isoStepInput) : (zInfo.step || 2.0);
-                if (okres && okres.startsWith('trend') && isoStepInput === 'auto') {
+                const isoSlider = document.getElementById('iso-step');
+                let rawStep = 'auto';
+                if (isoSlider) {
+                    const idx = parseInt(isoSlider.value, 10);
+                    rawStep = ISO_STEPS[idx] ?? 'auto';
+                }
+                let stepVal = (rawStep !== 'auto' && !isNaN(rawStep)) ? parseFloat(rawStep) : (zInfo.step || 2.0);
+                if (okres && okres.startsWith('trend') && rawStep === 'auto') {
                     stepVal = (zmienna === 'wilg') ? 5.0 : 1.0;
                 }
                 const unitStr = (okres && okres.startsWith('trend')) ? `${zInfo.unit || ''}/h` : zInfo.unit;
