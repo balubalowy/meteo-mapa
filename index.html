@@ -26,16 +26,12 @@
         
         <div class="sidebar-header">
             <h1 class="sidebar-title">B-Mapa</h1>
-            <span class="live-badge">LIVE</span>
         </div>
 
         <!-- SEKCJA: Radar -->
         <div class="sidebar-section">
             <div class="sidebar-section-header">
                 <span class="sidebar-section-title">Radar</span>
-                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lightning-modal').style.display='block'">
-                    Pioruny (Live)
-                </button>
             </div>
             <!-- Przełącznik źródła radaru -->
             <div class="segmented-control">
@@ -129,8 +125,6 @@
         <!-- SEKCJA: Warstwy -->
         <div class="sidebar-section">
             <div class="sidebar-section-title">Warstwy</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">Kolejność:</div>
-            
             <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;">
                 <!-- Generowane dynamicznie przez JS -->
             </div>
@@ -172,11 +166,6 @@
                     <button class="btn btn-ghost" style="border: 1px solid #eab308; color: #eab308; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('mgla')" title="Mgła"><i data-lucide="cloud-fog" style="width: 14px; height: 14px;"></i></button>
                     <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('kolko')" title="Strefa (kółko)"><i data-lucide="circle" style="width: 14px; height: 14px;"></i></button>
                 </div>
-                
-                <div style="display: flex; gap: 5px; margin-top: 5px;">
-                     <button class="btn btn-primary" style="flex: 1; font-size: 0.8rem; padding: 6px;" onclick="exportMap()"><i data-lucide="download" style="width: 14px; height:14px;"></i> Eksportuj</button>
-                     <button class="btn btn-ghost" style="flex: 1; font-size: 0.8rem; padding: 6px; color: var(--accent-danger);" onclick="clearMap()"><i data-lucide="trash-2" style="width: 14px; height:14px;"></i> Wyczyść</button>
-                </div>
             </div>
         </div>
         
@@ -187,13 +176,13 @@
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
                 Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych następujących instytucji / organizacji:
                 <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem;">
-                    <li><b>IMGW-PIB</b> — dane telemetryczne ze stacji, dane radarowe, dane o śniegu.</li>
-                    <li><b>DWD / Open-Meteo</b> — model prognostyczny ICON do danych modelowych pobrany przez Open-Meteo api.</li>
-                    <li><b>IEM ASOS</b> — europejskie stacje synoptyczne i lotniskowe (METAR) do danych zagranicznych.</li>
-                    <li><b>RainViewer</b> — kompozyt radarów meteorologicznych.</li>
-                    <li><b>EUMETSAT</b> — satelita geostacjonarny (HRV i IR, dla dziennych i nocnych).</li>
-                    <li><b>Blitzortung</b> — sieć detekcji wyładowań na żywo.</li>
-                    <li><b>Esri / OSM</b> — podkłady map.</li>
+                    <li><b>IMGW-PIB</b> - dane telemetryczne ze stacji, dane radarowe, dane o śniegu.</li>
+                    <li><b>DWD / Open-Meteo</b> - model prognostyczny ICON do danych modelowych pobrany przez Open-Meteo api.</li>
+                    <li><b>IEM ASOS</b> - europejskie stacje synoptyczne i lotniskowe (METAR) do danych zagranicznych.</li>
+                    <li><b>RainViewer</b> - kompozyt radarów meteorologicznych.</li>
+                    <li><b>EUMETSAT</b> - satelita geostacjonarny (HRV i IR, dla dziennych i nocnych).</li>
+                    <li><b>Blitzortung</b> - sieć detekcji wyładowań na żywo.</li>
+                    <li><b>Esri / OSM</b> - podkłady map.</li>
                 </ul>
             </div>
             

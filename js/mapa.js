@@ -58,14 +58,14 @@ window.initMapa = function() {
                 if (window.currentDrawingMode === 'front_chlodny') {
                     const decorator = L.polylineDecorator(layer, {
                         patterns: [
-                            { offset: 15, repeat: 40, symbol: L.Symbol.marker({
+                            { offset: 15, repeat: 32, symbol: L.Symbol.marker({
                                 rotate: true,
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'front-chlodny-icon',
-                                        html: '<svg viewBox="0 0 20 10" style="width:20px;height:10px;"><path d="M 0 10 L 10 0 L 20 10 Z" fill="#3b82f6"/></svg>',
-                                        iconSize: [20, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 16 10" style="width:16px;height:10px;display:block;"><polygon points="0,10 8,0 16,10" fill="#2563eb"/></svg>',
+                                        iconSize: [16, 10],
+                                        iconAnchor: [8, 10]
                                     })
                                 }
                             })}
@@ -75,14 +75,14 @@ window.initMapa = function() {
                 } else if (window.currentDrawingMode === 'front_chlodny_2') {
                     const decorator = L.polylineDecorator(layer, {
                         patterns: [
-                            { offset: 15, repeat: 40, symbol: L.Symbol.marker({
+                            { offset: 15, repeat: 32, symbol: L.Symbol.marker({
                                 rotate: true,
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'front-chlodny-icon',
-                                        html: '<svg viewBox="0 0 20 10" style="width:20px;height:10px;"><path d="M 0 10 L 10 0 L 20 10 Z" fill="#3b82f6"/></svg>',
-                                        iconSize: [20, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 16 10" style="width:16px;height:10px;display:block;"><polygon points="0,10 8,0 16,10" fill="#2563eb"/></svg>',
+                                        iconSize: [16, 10],
+                                        iconAnchor: [8, 10]
                                     })
                                 }
                             })}
@@ -92,14 +92,14 @@ window.initMapa = function() {
                 } else if (window.currentDrawingMode === 'front_cieply') {
                     const decorator = L.polylineDecorator(layer, {
                         patterns: [
-                            { offset: 15, repeat: 40, symbol: L.Symbol.marker({
+                            { offset: 15, repeat: 32, symbol: L.Symbol.marker({
                                 rotate: true,
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'front-cieply-icon',
-                                        html: '<svg viewBox="0 0 20 10" style="width:20px;height:10px;"><path d="M 0 10 A 10 10 0 0 1 20 10 Z" fill="#ef4444"/></svg>',
-                                        iconSize: [20, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 16 10" style="width:16px;height:10px;display:block;"><path d="M 0 10 A 8 8 0 0 1 16 10 Z" fill="#dc2626"/></svg>',
+                                        iconSize: [16, 10],
+                                        iconAnchor: [8, 10]
                                     })
                                 }
                             })}
@@ -109,25 +109,25 @@ window.initMapa = function() {
                 } else if (window.currentDrawingMode === 'front_zokludowany') {
                     const decorator = L.polylineDecorator(layer, {
                         patterns: [
-                            { offset: 15, repeat: 60, symbol: L.Symbol.marker({
+                            { offset: 12, repeat: 48, symbol: L.Symbol.marker({
                                 rotate: true,
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'front-zokl-icon',
-                                        html: '<svg viewBox="0 0 20 10" style="width:20px;height:10px;"><path d="M 0 10 L 10 0 L 20 10 Z" fill="#d946ef"/></svg>',
-                                        iconSize: [20, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 16 10" style="width:16px;height:10px;display:block;"><polygon points="0,10 8,0 16,10" fill="#9333ea"/></svg>',
+                                        iconSize: [16, 10],
+                                        iconAnchor: [8, 10]
                                     })
                                 }
                             })},
-                            { offset: 45, repeat: 60, symbol: L.Symbol.marker({
+                            { offset: 36, repeat: 48, symbol: L.Symbol.marker({
                                 rotate: true,
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'front-zokl-icon',
-                                        html: '<svg viewBox="0 0 20 10" style="width:20px;height:10px;"><path d="M 0 10 A 10 10 0 0 1 20 10 Z" fill="#d946ef"/></svg>',
-                                        iconSize: [20, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 16 10" style="width:16px;height:10px;display:block;"><path d="M 0 10 A 8 8 0 0 1 16 10 Z" fill="#9333ea"/></svg>',
+                                        iconSize: [16, 10],
+                                        iconAnchor: [8, 10]
                                     })
                                 }
                             })}
@@ -142,9 +142,9 @@ window.initMapa = function() {
                                 markerOptions: {
                                     icon: L.divIcon({
                                         className: 'zbieznosc-icon',
-                                        html: '<svg viewBox="0 0 10 10" style="width:10px;height:10px;"><path d="M 10 10 L 0 0" stroke="#f97316" stroke-width="2" fill="none"/></svg>',
-                                        iconSize: [10, 10],
-                                        iconAnchor: [10, 10]
+                                        html: '<svg viewBox="0 0 8 8" style="width:8px;height:8px;display:block;"><line x1="8" y1="8" x2="0" y2="0" stroke="#f97316" stroke-width="2"/></svg>',
+                                        iconSize: [8, 8],
+                                        iconAnchor: [4, 4]
                                     })
                                 }
                             })}
@@ -154,44 +154,44 @@ window.initMapa = function() {
                 } else if (window.currentDrawingMode === 'strzalka') {
                     const decorator = L.polylineDecorator(layer, {
                         patterns: [
-                            { offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 18, polygon: true, pathOptions: {stroke: true, color: '#a8a29e', fillColor: '#a8a29e', fillOpacity: 1}}) }
+                            { offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 14, polygon: true, pathOptions: {stroke: false, fillColor: '#cbd5e1', fillOpacity: 1}}) }
                         ]
                     }).addTo(map);
                     layer._myDecorator = decorator;
                 } else if (window.currentDrawingMode === 'wyz') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-wyz',
-                        html: '<div style="color: #3b82f6; font-weight: bold; font-family: sans-serif; font-size: 32px; text-shadow: 0px 0px 4px white, 0px 0px 4px white; transform: translate(-50%, -50%);">W</div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(30,58,138,0.92);border:2px solid #60a5fa;border-radius:50%;color:#ffffff;font-weight:800;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);font-family:sans-serif;">W</div>',
                         iconSize: [0, 0]
                     }));
                 } else if (window.currentDrawingMode === 'niz') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-niz',
-                        html: '<div style="color: #ef4444; font-weight: bold; font-family: sans-serif; font-size: 32px; text-shadow: 0px 0px 4px white, 0px 0px 4px white; transform: translate(-50%, -50%);">N</div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(185,28,28,0.92);border:2px solid #f87171;border-radius:50%;color:#ffffff;font-weight:800;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);font-family:sans-serif;">N</div>',
                         iconSize: [0, 0]
                     }));
                 } else if (window.currentDrawingMode === 'burza') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-burza',
-                        html: '<div style="color: #ef4444; font-size: 32px; text-shadow: 0px 0px 4px white; transform: translate(-50%, -50%);"></div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(15,23,42,0.85);border:1.5px solid #ef4444;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);"><svg viewBox="0 0 24 24" width="16" height="16" fill="#ef4444" stroke="#ef4444" stroke-width="1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>',
                         iconSize: [0, 0]
                     }));
                 } else if (window.currentDrawingMode === 'deszcz') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-deszcz',
-                        html: '<div style="color: #22c55e; font-size: 32px; font-weight: bold; text-shadow: 0px 0px 4px white; transform: translate(-50%, -50%);"></div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(15,23,42,0.85);border:1.5px solid #22c55e;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg></div>',
                         iconSize: [0, 0]
                     }));
                 } else if (window.currentDrawingMode === 'snieg') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-snieg',
-                        html: '<div style="color: #3b82f6; font-size: 32px; text-shadow: 0px 0px 4px white; transform: translate(-50%, -50%);"></div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(15,23,42,0.85);border:1.5px solid #38bdf8;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg></div>',
                         iconSize: [0, 0]
                     }));
                 } else if (window.currentDrawingMode === 'mgla') {
                     layer.setIcon(L.divIcon({
                         className: 'meteo-icon-mgla',
-                        html: '<div style="color: #eab308; font-size: 32px; font-weight: bold; text-shadow: 0px 0px 4px white; transform: translate(-50%, -50%);">≡</div>',
+                        html: '<div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(15,23,42,0.85);border:1.5px solid #eab308;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);transform:translate(-50%,-50%);"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#eab308" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="16" x2="20" y2="16"/></svg></div>',
                         iconSize: [0, 0]
                     }));
                 }
@@ -212,7 +212,7 @@ window.initMapa = function() {
         window.setDrawingColor = function(color) {
             if(map.pm) {
                 window.currentDrawingMode = 'polygon';
-                map.pm.setGlobalOptions({ pathOptions: { color: color, weight: 3, fillOpacity: 0.4, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: color, weight: 2, fillOpacity: 0.22, dashArray: '' } });
                 map.pm.enableDraw('Polygon');
             }
         };
@@ -221,25 +221,25 @@ window.initMapa = function() {
             if(!map.pm) return;
             window.currentDrawingMode = mode;
             if(mode === 'zbieznosc') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#f97316', weight: 3, fillOpacity: 0, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#f97316', weight: 2, fillOpacity: 0, dashArray: '6, 6' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'front_chlodny') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#3b82f6', weight: 3, fillOpacity: 0, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#2563eb', weight: 2.5, fillOpacity: 0, dashArray: '' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'front_chlodny_2') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#3b82f6', weight: 3, fillOpacity: 0, dashArray: '8, 8' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#2563eb', weight: 2.5, fillOpacity: 0, dashArray: '8, 6' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'front_cieply') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#ef4444', weight: 3, fillOpacity: 0, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#dc2626', weight: 2.5, fillOpacity: 0, dashArray: '' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'front_zokludowany') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#d946ef', weight: 3, fillOpacity: 0, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#9333ea', weight: 2.5, fillOpacity: 0, dashArray: '' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'strzalka') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#a8a29e', weight: 4, fillOpacity: 0, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#cbd5e1', weight: 3, fillOpacity: 0, dashArray: '' } });
                 map.pm.enableDraw('Line');
             } else if(mode === 'kolko') {
-                map.pm.setGlobalOptions({ pathOptions: { color: '#22c55e', weight: 3, fillOpacity: 0.3, dashArray: '' } });
+                map.pm.setGlobalOptions({ pathOptions: { color: '#22c55e', weight: 2, fillOpacity: 0.22, dashArray: '' } });
                 map.pm.enableDraw('Circle');
             } else if(['wyz', 'niz', 'burza', 'deszcz', 'snieg', 'mgla'].includes(mode)) {
                 map.pm.enableDraw('Marker');
