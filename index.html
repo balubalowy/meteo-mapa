@@ -24,33 +24,35 @@
     <!-- PANEL BOCZNY (SIDEBAR) -->
     <div id="map-sidebar" class="map-sidebar">
         
-        <div class="sidebar-header">
-            <h1 class="sidebar-title">B-Mapa</h1>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 10px; background: var(--bg-secondary);">
+            <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
         </div>
 
         <!-- SEKCJA: Radar -->
-        <div class="sidebar-section">
-            <div class="sidebar-section-header">
-                <span class="sidebar-section-title">Radar</span>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">
+                Radar
             </div>
             <!-- Przełącznik źródła radaru -->
-            <div class="segmented-control">
-                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')">IMGW</button>
-                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')">RainViewer</button>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">IMGW</button>
+                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">RainViewer</button>
             </div>
 
-            <div class="radar-player">
-                <button id="rv-play-btn" class="btn btn-ghost btn-icon" aria-label="Odtwórz lub zatrzymaj animację radaru">
+            <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <button id="rv-play-btn" class="btn btn-ghost" aria-label="Odtwórz lub zatrzymaj animację radaru" style="padding: 5px; border-radius: 50%; color: var(--accent-primary);">
                     <i data-lucide="play"></i>
                 </button>
-                <span id="rv-time" class="time-display">--:--</span>
-                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10">
+                <span id="rv-time" style="font-family: monospace; font-size: 0.9rem; font-weight: bold; width: 50px; text-align: center;">--:--</span>
+                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10" style="flex: 1; accent-color: var(--accent-primary);">
             </div>
         </div>
 
         <!-- SEKCJA: IMGW -->
-        <div class="sidebar-section">
-            <div class="sidebar-section-title">Stacje i pomiary</div>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">
+                Stacje i pomiary
+            </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
                     <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">ŹRÓDŁO:</span>
@@ -123,16 +125,16 @@
         </div>
 
         <!-- SEKCJA: Warstwy -->
-        <div class="sidebar-section">
-            <div class="sidebar-section-title">Warstwy</div>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Warstwy</div>
             <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;">
                 <!-- Generowane dynamicznie przez JS -->
             </div>
         </div>
 
         <!-- SEKCJA: Rysowanie -->
-        <div class="sidebar-section">
-            <div class="sidebar-section-title">Rysowanie</div>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">Rysowanie</div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Strefy:</div>
@@ -170,8 +172,8 @@
         </div>
         
         <!-- SEKCJA: Źródła danych i autorstwo -->
-        <div class="sidebar-section" style="background: rgba(0, 0, 0, 0.2);">
-            <div class="sidebar-section-title">Źródła danych i autorstwo</div>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Źródła danych i autorstwo</div>
             
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
                 Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych następujących instytucji / organizacji:
