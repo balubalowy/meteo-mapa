@@ -2023,7 +2023,7 @@ window.initMapa = function() {
 
         const imgwLiveCacheByMode = {};
 
-        async function getIMGWLiveData() {
+        async function getIMGWLiveData(targetParam = null) {
             const chkModel = document.getElementById('chk-source-model');
             let dataMode = 'stations';
             if (chkModel) {
@@ -2034,8 +2034,13 @@ window.initMapa = function() {
             }
             const now = Date.now();
             
-            if (imgwLiveCacheByMode[dataMode] && (now - imgwLiveCacheByMode[dataMode].time < 60000)) {
-                return imgwLiveCacheByMode[dataMode].data;
+            // Jeśli żądany parametr to śnieg, a w pamięci brak punktów śniegu, wymuś pobranie
+            const cached = imgwLiveCacheByMode[dataMode];
+            const isSnowParam = targetParam === 'snieg' || targetParam === 'snieg_swiezy';
+            const snowMissingInCache = isSnowParam && cached && cached.data && (!cached.data[targetParam] || !cached.data[targetParam].pt_lats.length);
+
+            if (cached && (now - cached.time < 60000) && !snowMissingInCache) {
+                return cached.data;
             }
             
             const loadingEl = document.getElementById('imgw-loading');
@@ -2465,17 +2470,20 @@ window.initMapa = function() {
             }
             
             let data = null;
-            const liveDataObj = await getIMGWLiveData();
+            const liveDataObj = await getIMGWLiveData(zmienna);
             if (liveDataObj) {
                 data = liveDataObj[zmienna];
             }
-
-            if (!data || !data.pt_lats || !data.pt_lats.length) return;
 
             imgwLayerGroup.clearLayers();
             if(idwOverlay) {
                 map.removeLayer(idwOverlay);
                 idwOverlay = null;
+            }
+
+            if (!data || !data.pt_lats || !data.pt_lats.length) {
+                if (loadingEl) loadingEl.style.display = 'none';
+                return;
             }
             
             // ZInfo setup - pełna zgodność z oficjalnymi skalami IMGW

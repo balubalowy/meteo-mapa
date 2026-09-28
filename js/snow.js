@@ -152,7 +152,9 @@
 
         try {
             const pdfUrl = 'https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf';
-            const pdfText = await extractTextFromPdf(pdfUrl);
+            const pdfPromise = extractTextFromPdf(pdfUrl);
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF timeout')), 3500));
+            const pdfText = await Promise.race([pdfPromise, timeoutPromise]);
             if (pdfText && pdfText.length > 500 && stationsMeta.length > 0) {
                 records = parseSnowRecords(pdfText, stationsMeta);
             }
@@ -172,8 +174,10 @@
             }
         }
 
-        _snowCache = records;
-        _snowCacheTime = now;
+        if (records && records.length > 0) {
+            _snowCache = records;
+            _snowCacheTime = now;
+        }
         return records;
     }
 
@@ -235,7 +239,7 @@
                 dataObj['snieg_zapas'].pt_vals.push(zapas);
                 dataObj['snieg_zapas'].pt_dirs.push(null);
                 dataObj['snieg_zapas'].pt_txts.push(`${zapas}mm`);
-                dataObj['snieg_zapas'].pt_hov.push(baseTooltip);
+                dataObj['snieg_zapas'].pt_hov.push(snowTooltip);
                 dataObj['snieg_zapas'].pt_foreign.push(false);
                 dataObj['snieg_zapas'].pt_types.push('ODCZYT');
             }
@@ -245,7 +249,7 @@
             dataObj['snieg_obciazenie'].pt_vals.push(obciazenie);
             dataObj['snieg_obciazenie'].pt_dirs.push(null);
             dataObj['snieg_obciazenie'].pt_txts.push(`${obciazenie.toFixed(2)}`);
-            dataObj['snieg_obciazenie'].pt_hov.push(baseTooltip);
+            dataObj['snieg_obciazenie'].pt_hov.push(snowTooltip);
             dataObj['snieg_obciazenie'].pt_foreign.push(false);
             dataObj['snieg_obciazenie'].pt_types.push('ODCZYT');
 
@@ -254,7 +258,7 @@
             dataObj['snieg_norma'].pt_vals.push(proc);
             dataObj['snieg_norma'].pt_dirs.push(null);
             dataObj['snieg_norma'].pt_txts.push(`${proc}%`);
-            dataObj['snieg_norma'].pt_hov.push(baseTooltip);
+            dataObj['snieg_norma'].pt_hov.push(snowTooltip);
             dataObj['snieg_norma'].pt_foreign.push(false);
             dataObj['snieg_norma'].pt_types.push('ODCZYT');
         });
