@@ -24,36 +24,37 @@
     <!-- PANEL BOCZNY (SIDEBAR) -->
     <div id="map-sidebar" class="map-sidebar">
         
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 10px; background: var(--bg-secondary);">
-            <i data-lucide="map" style="color: var(--accent-primary);"></i>
-            <h2 style="margin: 0; font-size: 1.1rem;">Wielki Pulpit</h2>
+        <div class="sidebar-header">
+            <h1 class="sidebar-title">B-Mapa</h1>
+            <span class="live-badge">LIVE</span>
         </div>
 
         <!-- SEKCJA: Radar -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="cloud-rain" style="width: 16px; height: 16px;"></i> Radar
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-section-title">Radar</span>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lightning-modal').style.display='block'">
+                    Pioruny (Live)
+                </button>
             </div>
             <!-- Przełącznik źródła radaru -->
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">IMGW</button>
-                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">RainViewer</button>
+            <div class="segmented-control">
+                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')">IMGW</button>
+                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')">RainViewer</button>
             </div>
 
-            <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                <button id="rv-play-btn" class="btn btn-ghost" aria-label="Odtwórz lub zatrzymaj animację radaru" style="padding: 5px; border-radius: 50%; color: var(--accent-primary);">
+            <div class="radar-player">
+                <button id="rv-play-btn" class="btn btn-ghost btn-icon" aria-label="Odtwórz lub zatrzymaj animację radaru">
                     <i data-lucide="play"></i>
                 </button>
-                <span id="rv-time" style="font-family: monospace; font-size: 0.9rem; font-weight: bold; width: 50px; text-align: center;">--:--</span>
-                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10" style="flex: 1; accent-color: var(--accent-primary);">
+                <span id="rv-time" class="time-display">--:--</span>
+                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10">
             </div>
         </div>
 
         <!-- SEKCJA: IMGW -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="thermometer" style="width: 16px; height: 16px;"></i> IMGW
-            </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Stacje i pomiary</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
                     <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">ŹRÓDŁO:</span>
@@ -126,10 +127,8 @@
         </div>
 
         <!-- SEKCJA: Warstwy -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
-                <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="layers" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Warstwy</span>
-            </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Warstwy</div>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">Kolejność:</div>
             
             <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;">
@@ -138,10 +137,8 @@
         </div>
 
         <!-- SEKCJA: Rysowanie -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Rysowanie
-            </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Rysowanie</div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Strefy:</div>
@@ -184,21 +181,19 @@
         </div>
         
         <!-- SEKCJA: Źródła danych i autorstwo -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="shield-check" style="width: 16px; height: 16px; color: var(--accent-primary);"></i> Źródła danych i autorstwo
-            </div>
+        <div class="sidebar-section" style="background: rgba(0, 0, 0, 0.2);">
+            <div class="sidebar-section-title">Źródła danych i autorstwo</div>
             
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
-                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych:
+                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych następujących instytucji / organizacji:
                 <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem;">
-                    <li><b>IMGW-PIB</b> — telemetria stacji, SYNOP QNH, radar CMAX, biuletyn śnieżny.</li>
-                    <li><b>DWD / Open-Meteo</b> — numeryczny model prognostyczny ICON.</li>
-                    <li><b>IEM ASOS</b> — europejskie stacje synoptyczne i lotniskowe (METAR).</li>
+                    <li><b>IMGW-PIB</b> — dane telemetryczne ze stacji, dane radarowe, dane o śniegu.</li>
+                    <li><b>DWD / Open-Meteo</b> — model prognostyczny ICON do danych modelowych pobrany przez Open-Meteo api.</li>
+                    <li><b>IEM ASOS</b> — europejskie stacje synoptyczne i lotniskowe (METAR) do danych zagranicznych.</li>
                     <li><b>RainViewer</b> — kompozyt radarów meteorologicznych.</li>
-                    <li><b>EUMETSAT</b> — satelita geostacjonarny (HRV i IR).</li>
+                    <li><b>EUMETSAT</b> — satelita geostacjonarny (HRV i IR, dla dziennych i nocnych).</li>
                     <li><b>Blitzortung</b> — sieć detekcji wyładowań na żywo.</li>
-                    <li><b>Esri / OSM</b> — podkłady kartograficzne.</li>
+                    <li><b>Esri / OSM</b> — podkłady map.</li>
                 </ul>
             </div>
             
