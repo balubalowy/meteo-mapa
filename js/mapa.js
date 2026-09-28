@@ -2429,6 +2429,7 @@ window.initMapa = function() {
         }
 
         window.renderIMGW = async function() {
+            const okres = 'now';
             const zmienna = document.getElementById('imgw-zmienna').value;
             const loadingEl = document.getElementById('imgw-loading');
             
