@@ -261,17 +261,15 @@ window.initMapa = function() {
         };
 
         // ----------------------------------------------------
-        // PODKŁADY MAPOWE (CARTO, ESRI HILLSHADE, OPENTOPO)
+        // PODKŁADY MAPOWE (Otwarte, darmowe, bez kluczy API)
         // ----------------------------------------------------
-        const CARTO_KEY = 'cb1_2p7i_1_352cdbd16b8b51b87892ae14';
-
-        // Warstwa bazowa (Tylko lądy/wody, bez napisów)
-        const darkBase = L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { 
-            maxZoom: 20, pane: 'basePane', attribution: 'CartoDB'
+        // Warstwy bazowe Esri Canvas (Czyste tło bez napisów, otwarte i bez limitów)
+        const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { 
+            maxZoom: 16, pane: 'basePane', attribution: 'Esri' 
         });
         
-        const lightBase = L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { 
-            maxZoom: 20, pane: 'basePane', attribution: 'CartoDB'
+        const lightBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { 
+            maxZoom: 16, pane: 'basePane', attribution: 'Esri' 
         });
 
         // Plastyczne cieniowanie rzeźby terenu (DEM / Hillshade)
@@ -332,7 +330,7 @@ window.initMapa = function() {
 
         const basemaps = {
             "Ciemny (Dark)": darkBase,
-            "Jasny (Voyager)": lightBase,
+            "Jasny (Light)": lightBase,
             "Rzeźba terenu (Hillshade)": hillshadeBase,
             "Topograficzna (OpenTopo)": openTopoBase,
             "Fizyczna (World Topo)": esriTopoBase
