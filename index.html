@@ -24,8 +24,11 @@
     <!-- PANEL BOCZNY (SIDEBAR) -->
     <div id="map-sidebar" class="map-sidebar">
         
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 10px; background: var(--bg-secondary);">
+        <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
             <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
+            <button class="btn btn-ghost mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 8px;" title="Zamknij panel" aria-label="Zamknij panel">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
 
         <!-- SEKCJA: Radar -->

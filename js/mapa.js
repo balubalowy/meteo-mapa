@@ -1062,6 +1062,14 @@ window.initMapa = function() {
             }, 100);
         };
 
+        // Domyślne schowanie panelu na urządzeniach mobilnych (< 768px)
+        if (window.innerWidth <= 768) {
+            const mobileSidebar = document.getElementById('map-sidebar');
+            const mobileIcon = document.getElementById('sidebar-toggle-icon');
+            if (mobileSidebar) mobileSidebar.classList.add('sidebar-collapsed');
+            if (mobileIcon) mobileIcon.setAttribute('data-lucide', 'panel-left-open');
+        }
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const container = document.querySelector('.map-dashboard-container');
