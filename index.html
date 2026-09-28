@@ -35,8 +35,8 @@
             </div>
             <!-- Przełącznik źródła radaru -->
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-primary" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">IMGW</button>
-                <button id="radar-src-rv" class="btn btn-ghost" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">RainViewer</button>
+                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">IMGW</button>
+                <button id="radar-src-rv" class="btn btn-primary" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">RainViewer</button>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
@@ -100,7 +100,7 @@
                         <label><input type="checkbox" id="chk-iso" onchange="renderIMGW()"> Izolinie</label>
                         <label><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
                         <label><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
-                        <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()" checked> Zagranica</label>
+                        <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
                     </div>
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -137,7 +137,7 @@
         </div>
 
         <!-- SEKCJA: Rysowanie -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
+        <div id="section-rysowanie" style="display: none; padding: 15px; border-bottom: 1px solid var(--border-subtle);">
             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">Rysowanie</div>
             
             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -204,13 +204,11 @@
         
         <!-- Pasek Narzędziowy Mapy (Top-Left obok kontrolek zoomu) -->
         <div style="position: absolute; top: 12px; left: 55px; z-index: 1001; display: flex; gap: 8px; align-items: center;">
-            <button id="map-toggle-sidebar" class="btn btn-ghost" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--border-subtle); color: var(--text-primary); padding: 7px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" onclick="window.toggleMapSidebar()" title="Pokaż / Ukryj panel boczny">
-                <i data-lucide="panel-left-close" id="sidebar-toggle-icon" style="width: 15px; height: 15px;"></i>
-                <span id="sidebar-toggle-text">Panel</span>
+            <button id="map-toggle-sidebar" class="btn btn-ghost" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--border-subtle); color: var(--text-primary); width: 34px; height: 34px; padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" onclick="window.toggleMapSidebar()" title="Pokaż / Ukryj panel boczny" aria-label="Pokaż lub ukryj panel boczny">
+                <i data-lucide="panel-left-close" id="sidebar-toggle-icon" style="width: 16px; height: 16px;"></i>
             </button>
-            <button id="map-fs-btn" class="map-fullscreen-btn" onclick="window.toggleMapFullscreen()" title="Tryb pełnoekranowy (F11 / Esc)">
-                <i data-lucide="maximize" style="width: 15px; height: 15px;"></i>
-                <span id="map-fs-text">Pełny Ekran</span>
+            <button id="map-fs-btn" class="map-fullscreen-btn" style="width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="window.toggleMapFullscreen()" title="Tryb pełnoekranowy (F11 / Esc)" aria-label="Tryb pełnoekranowy">
+                <i data-lucide="maximize" id="map-fs-icon" style="width: 16px; height: 16px;"></i>
             </button>
         </div>
 

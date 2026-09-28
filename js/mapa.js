@@ -397,7 +397,7 @@ window.initMapa = function() {
         // ----------------------------------------------------
         // RADAR OPADÓW (IMGW CMAX POLCOMP 4h / RainViewer)
         // ----------------------------------------------------
-        let activeRadarSource = 'imgw'; // Domyślnie oficjalny polski radar IMGW CMAX!
+        let activeRadarSource = 'rv'; // Domyślnie radar RainViewer
         let radarTileLayer = null, radarHost = '', radarFrames = [], currentFrame = 0, animationTimer = null;
         let imgwRadarOverlay = null, imgwFrames = [];
         // Precyzyjnie skalibrowany Bounding Box z metadanych HDF5 POLRAD POLCOMP (+proj=aeqd)
@@ -484,7 +484,7 @@ window.initMapa = function() {
             layers: 'msg_fes:rgb_eview',
             format: 'image/png',
             transparent: true,
-            opacity: 0.65,
+            opacity: 0.68,
             pane: 'satellitePane',
             maxNativeZoom: 7,
             maxZoom: 18,
@@ -496,7 +496,7 @@ window.initMapa = function() {
             layers: 'mtg_fd:ir105_hrfi',
             format: 'image/png',
             transparent: true,
-            opacity: 0.60,
+            opacity: 0.52,
             pane: 'satelliteNightPane',
             maxNativeZoom: 7,
             maxZoom: 18,
@@ -809,23 +809,23 @@ window.initMapa = function() {
         // MENEDŻER WARSTW (Domyślna kolejność, widoczność i krycie wg preferencji)
         // ----------------------------------------------------
         window.MAP_LAYERS = {
-            'drawings':   { id: 'drawings',   name: 'Rysowanie',            visible: false, opacity: 100, pane: 'drawingsPane' },
-            'stations':   { id: 'stations',   name: 'Stacje',               visible: true,  opacity: 100, pane: 'stationsPane' },
-            'boundaries': { id: 'boundaries', name: 'Granice',              visible: true,  opacity: 100, pane: 'boundariesPane' },
-            'lightning':  { id: 'lightning',  name: 'Wyładowania',          visible: false, opacity: 95,  pane: 'lightningPane' },
-            'radar':      { id: 'radar',      name: 'Radar',                visible: false, opacity: 87,  pane: 'radarPane' },
-            'sat_day':    { id: 'sat_day',    name: 'Satelita (dzień)',     visible: false, opacity: 100, pane: 'satellitePane' },
-            'inter':      { id: 'inter',      name: 'Interpolacja',         visible: true,  opacity: 70,  pane: 'weatherPane' },
-            'sat_night':  { id: 'sat_night',  name: 'Satelita (noc)',       visible: false, opacity: 60,  pane: 'satelliteNightPane' }
+            'boundaries': { id: 'boundaries', name: 'Granice',          visible: true,  opacity: 100, pane: 'boundariesPane' },
+            'drawings':   { id: 'drawings',   name: 'Rysowanie',        visible: false, opacity: 100, pane: 'drawingsPane' },
+            'stations':   { id: 'stations',   name: 'Stacje',           visible: true,  opacity: 100, pane: 'stationsPane' },
+            'lightning':  { id: 'lightning',  name: 'Wyładowania',      visible: true,  opacity: 95,  pane: 'lightningPane' },
+            'radar':      { id: 'radar',      name: 'Radar',            visible: true,  opacity: 68,  pane: 'radarPane' },
+            'inter':      { id: 'inter',      name: 'Interpolacja',     visible: true,  opacity: 88,  pane: 'weatherPane' },
+            'sat_day':    { id: 'sat_day',    name: 'Satelita (dzień)', visible: true,  opacity: 68,  pane: 'satellitePane' },
+            'sat_night':  { id: 'sat_night',  name: 'Satelita (noc)',   visible: false, opacity: 52,  pane: 'satelliteNightPane' }
         };
 
         // Domyślna kolejność od góry (wierzch) do dołu
-        window.layerOrder = ['drawings', 'stations', 'boundaries', 'lightning', 'radar', 'sat_day', 'inter', 'sat_night'];
+        window.layerOrder = ['boundaries', 'drawings', 'stations', 'lightning', 'radar', 'inter', 'sat_day', 'sat_night'];
 
         // Wczytaj zapisany stan z localStorage jeśli istnieje
         try {
-            const savedLayers = localStorage.getItem('meteo_map_layers');
-            const savedOrder = localStorage.getItem('meteo_map_order');
+            const savedLayers = localStorage.getItem('meteo_map_layers_v4');
+            const savedOrder = localStorage.getItem('meteo_map_order_v4');
             if (savedLayers) {
                 const parsed = JSON.parse(savedLayers);
                 Object.keys(parsed).forEach(k => {
@@ -845,8 +845,8 @@ window.initMapa = function() {
 
         function saveLayerState() {
             try {
-                localStorage.setItem('meteo_map_layers', JSON.stringify(window.MAP_LAYERS));
-                localStorage.setItem('meteo_map_order', JSON.stringify(window.layerOrder));
+                localStorage.setItem('meteo_map_layers_v4', JSON.stringify(window.MAP_LAYERS));
+                localStorage.setItem('meteo_map_order_v4', JSON.stringify(window.layerOrder));
             } catch(e) {}
         }
 
@@ -882,7 +882,12 @@ window.initMapa = function() {
             window.MAP_LAYERS[key].visible = isChecked;
             saveLayerState();
             
-            if (key === 'sat_day') {
+            if (key === 'drawings') {
+                const secDraw = document.getElementById('section-rysowanie');
+                if (secDraw) {
+                    secDraw.style.display = isChecked ? 'block' : 'none';
+                }
+            } else if (key === 'sat_day') {
                 if (isChecked) {
                     if (!map.hasLayer(satelliteDayLayer)) map.addLayer(satelliteDayLayer);
                     const activeTime = activeRadarSource === 'imgw' ? (imgwFrames[currentFrame]?.time) : (radarFrames[currentFrame]?.time);
@@ -1006,6 +1011,12 @@ window.initMapa = function() {
         window.applyLayerOrder();
         window.renderLayerManagerUI();
 
+        // Stan początkowy sekcji rysowania w panelu bocznym
+        const initialDrawSec = document.getElementById('section-rysowanie');
+        if (initialDrawSec) {
+            initialDrawSec.style.display = (window.MAP_LAYERS['drawings'] && window.MAP_LAYERS['drawings'].visible) ? 'block' : 'none';
+        }
+
         // ----------------------------------------------------
         // PEŁNY EKRAN I ZWIJANIE PANELU BOCZNEGO
         // ----------------------------------------------------
@@ -1017,12 +1028,12 @@ window.initMapa = function() {
             const isFs = container.classList.toggle('map-fullscreen');
 
             if (isFs) {
-                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="minimize" style="width: 15px; height: 15px;"></i> <span id="map-fs-text">Zamknij Pełny Ekran</span>';
+                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="minimize" id="map-fs-icon" style="width: 16px; height: 16px;"></i>';
                 if (container.requestFullscreen && !document.fullscreenElement) {
                     container.requestFullscreen().catch(() => {});
                 }
             } else {
-                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="maximize" style="width: 15px; height: 15px;"></i> <span id="map-fs-text">Pełny Ekran</span>';
+                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="maximize" id="map-fs-icon" style="width: 16px; height: 16px;"></i>';
                 if (document.fullscreenElement && document.exitFullscreen) {
                     document.exitFullscreen().catch(() => {});
                 }
@@ -1065,7 +1076,7 @@ window.initMapa = function() {
             const fsBtn = document.getElementById('map-fs-btn');
             if (container && !document.fullscreenElement && container.classList.contains('map-fullscreen')) {
                 container.classList.remove('map-fullscreen');
-                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="maximize" style="width: 15px; height: 15px;"></i> <span id="map-fs-text">Pełny Ekran</span>';
+                if (fsBtn) fsBtn.innerHTML = '<i data-lucide="maximize" id="map-fs-icon" style="width: 16px; height: 16px;"></i>';
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 setTimeout(() => { if (map) map.invalidateSize(); }, 150);
             }
