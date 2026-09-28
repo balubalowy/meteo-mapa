@@ -184,11 +184,11 @@
     window.getSnowData = async function() {
         const records = await fetchSnowRecords();
         const dataObj = {
-            'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-            'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-            'snieg_zapas': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-            'snieg_obciazenie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-            'snieg_norma': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] }
+            'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+            'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+            'snieg_zapas': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+            'snieg_obciazenie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+            'snieg_norma': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 }
         };
 
         records.forEach(r => {
@@ -200,6 +200,17 @@
             const obciazenie = r.obciazenie || 0;
             const proc = r.procent_normy || 0;
             const dateStr = r.data ? ` (${r.data})` : '';
+
+            if (r.data) {
+                const parts = r.data.split('.');
+                if (parts.length === 3) {
+                    const timeMs = Date.UTC(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10), 6, 0, 0);
+                    if (timeMs > dataObj['snieg'].latestTimeMs) {
+                        dataObj['snieg'].latestTimeMs = timeMs;
+                        dataObj['snieg_swiezy'].latestTimeMs = timeMs;
+                    }
+                }
+            }
 
             const swiezyVal = (r.swiezy != null && !isNaN(r.swiezy)) ? r.swiezy : 0;
 

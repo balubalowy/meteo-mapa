@@ -1093,9 +1093,14 @@ window.initMapa = function() {
         // ----------------------------------------------------
         // WSKAŹNIK OPÓŹNIENIA DANYCH METEOROLOGICZNYCH (Live Lag Badge)
         // ----------------------------------------------------
-        function updateDelayBadge(latestTimeMs) {
+        function updateDelayBadge(latestTimeMs, paramName) {
             const badge = document.getElementById('map-delay-badge');
-            if (!badge || !latestTimeMs) return;
+            if (!badge) return;
+            if (!latestTimeMs || latestTimeMs <= 0) {
+                badge.style.display = 'none';
+                return;
+            }
+            badge.style.display = 'inline-flex';
 
             const now = Date.now();
             const diffMs = Math.max(0, now - latestTimeMs);
@@ -1120,12 +1125,13 @@ window.initMapa = function() {
             badge.style.color = color;
             badge.style.background = bg;
             badge.style.borderColor = border;
-            badge.title = `Najświeższy pomiar IMGW: ${localTime} (opóźnienie: ${diffMin} min)`;
+            const paramLabel = paramName ? ` (${paramName})` : '';
+            badge.title = `Najświeższy pomiar IMGW${paramLabel}: ${localTime} (opóźnienie: ${diffMin} min)`;
         }
 
         setInterval(() => {
-            if (window.latestMeasurementTimeMs) {
-                updateDelayBadge(window.latestMeasurementTimeMs);
+            if (window.currentDisplayedTimeMs) {
+                updateDelayBadge(window.currentDisplayedTimeMs, window.currentDisplayedParamName);
             }
         }, 30000);
 
@@ -2124,52 +2130,17 @@ window.initMapa = function() {
                     reqModel
                 ]);
 
-                // Obliczanie czasu najbardziej aktualnego pomiaru dla wskaźnika opóźnienia
-                let maxMeteoTimeMs = 0;
-                if (Array.isArray(rawData)) {
-                    for (const st of rawData) {
-                        const dStr = st.temperatura_powietrza_data || st.temperatura_gruntu_data || st.wiatr_srednia_predkosc_data;
-                        if (!dStr) continue;
-                        const parts = dStr.split(/[- :]/);
-                        if (parts.length >= 6) {
-                            const timeMs = Date.UTC(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5]);
-                            if (timeMs > maxMeteoTimeMs) {
-                                maxMeteoTimeMs = timeMs;
-                            }
-                        }
-                    }
-                }
-                if (Array.isArray(synopData)) {
-                    for (const st of synopData) {
-                        if (st.data_pomiaru && st.godzina_pomiaru) {
-                            const parts = st.data_pomiaru.split('-');
-                            if (parts.length === 3) {
-                                const hour = parseInt(st.godzina_pomiaru, 10);
-                                const timeMs = Date.UTC(parts[0], parts[1]-1, parts[2], hour, 0, 0);
-                                if (timeMs > maxMeteoTimeMs) {
-                                    maxMeteoTimeMs = timeMs;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (maxMeteoTimeMs > 0) {
-                    window.latestMeasurementTimeMs = maxMeteoTimeMs;
-                    updateDelayBadge(maxMeteoTimeMs);
-                }
-                
                 const dataObj = {
-                    'temp': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'cisnienie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'wiatr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'wiatr_sr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'rosy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'lcl': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'wilg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'grunt': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] },
-                    'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [] }
+                    'temp': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'cisnienie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'wiatr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'wiatr_sr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'rosy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'lcl': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'wilg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'grunt': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
+                    'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 }
                 };
 
                 // Śledzenie koordynatów stacji fizycznych do deduplikacji w trybie hybrydowym
@@ -2202,6 +2173,17 @@ window.initMapa = function() {
                         const sWind = st.predkosc_wiatru;
                         const sRh = st.wilgotnosc_wzgledna;
                         const timeLabel = sHour ? ` (${sHour}:00 UTC)` : '';
+
+                        if (st.data_pomiaru && sHour) {
+                            const parts = st.data_pomiaru.split('-');
+                            if (parts.length === 3) {
+                                const hour = parseInt(sHour, 10);
+                                const timeMs = Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), hour, 0, 0);
+                                if (timeMs <= Date.now() && timeMs > dataObj['cisnienie'].latestTimeMs) {
+                                    dataObj['cisnienie'].latestTimeMs = timeMs;
+                                }
+                            }
+                        }
                         
                         window._stationMetaMap = window._stationMetaMap || {};
                         window._stationMetaMap[String(sid)] = { lat: coord.lat, lon: coord.lon, nazwa: sName };
@@ -2284,6 +2266,15 @@ window.initMapa = function() {
 
                         const addData = (zmienna, val, txt, hov, dir, t_str, extra) => {
                             if (isNaN(val) || !isDataValid(t_str)) return;
+                            if (t_str) {
+                                const parts = t_str.split(/[- :]/);
+                                if (parts.length >= 6) {
+                                    const timeMs = Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), parseInt(parts[3], 10), parseInt(parts[4], 10), parseInt(parts[5], 10));
+                                    if (timeMs <= Date.now() && timeMs > (dataObj[zmienna].latestTimeMs || 0)) {
+                                        dataObj[zmienna].latestTimeMs = timeMs;
+                                    }
+                                }
+                            }
                             dataObj[zmienna].pt_lats.push(lat);
                             dataObj[zmienna].pt_lons.push(lon);
                             dataObj[zmienna].pt_vals.push(val);
@@ -2385,34 +2376,44 @@ window.initMapa = function() {
 
                 // 3b. STACJE ŚNIEGOWE IMGW (Pokrywa śnieżna z biuletynu monitoringu hydrologiczno-meteorologicznego)
                 if (snowData && dataMode !== 'model') {
-                    if (snowData['snieg'] && Array.isArray(snowData['snieg'].pt_lats)) {
-                        for (let i = 0; i < snowData['snieg'].pt_lats.length; i++) {
-                            dataObj['snieg'].pt_lats.push(snowData['snieg'].pt_lats[i]);
-                            dataObj['snieg'].pt_lons.push(snowData['snieg'].pt_lons[i]);
-                            dataObj['snieg'].pt_vals.push(snowData['snieg'].pt_vals[i]);
-                            dataObj['snieg'].pt_dirs.push(null);
-                            dataObj['snieg'].pt_txts.push(snowData['snieg'].pt_txts[i]);
-                            dataObj['snieg'].pt_hov.push(snowData['snieg'].pt_hov[i]);
-                            dataObj['snieg'].pt_foreign.push(false);
-                            dataObj['snieg'].pt_types.push('ODCZYT');
+                    if (snowData['snieg']) {
+                        if (snowData['snieg'].latestTimeMs) {
+                            dataObj['snieg'].latestTimeMs = snowData['snieg'].latestTimeMs;
+                        }
+                        if (Array.isArray(snowData['snieg'].pt_lats)) {
+                            for (let i = 0; i < snowData['snieg'].pt_lats.length; i++) {
+                                dataObj['snieg'].pt_lats.push(snowData['snieg'].pt_lats[i]);
+                                dataObj['snieg'].pt_lons.push(snowData['snieg'].pt_lons[i]);
+                                dataObj['snieg'].pt_vals.push(snowData['snieg'].pt_vals[i]);
+                                dataObj['snieg'].pt_dirs.push(null);
+                                dataObj['snieg'].pt_txts.push(snowData['snieg'].pt_txts[i]);
+                                dataObj['snieg'].pt_hov.push(snowData['snieg'].pt_hov[i]);
+                                dataObj['snieg'].pt_foreign.push(false);
+                                dataObj['snieg'].pt_types.push('ODCZYT');
 
-                            realCoords['snieg'].lats.push(snowData['snieg'].pt_lats[i]);
-                            realCoords['snieg'].lons.push(snowData['snieg'].pt_lons[i]);
+                                realCoords['snieg'].lats.push(snowData['snieg'].pt_lats[i]);
+                                realCoords['snieg'].lons.push(snowData['snieg'].pt_lons[i]);
+                            }
                         }
                     }
-                    if (snowData['snieg_swiezy'] && Array.isArray(snowData['snieg_swiezy'].pt_lats)) {
-                        for (let i = 0; i < snowData['snieg_swiezy'].pt_lats.length; i++) {
-                            dataObj['snieg_swiezy'].pt_lats.push(snowData['snieg_swiezy'].pt_lats[i]);
-                            dataObj['snieg_swiezy'].pt_lons.push(snowData['snieg_swiezy'].pt_lons[i]);
-                            dataObj['snieg_swiezy'].pt_vals.push(snowData['snieg_swiezy'].pt_vals[i]);
-                            dataObj['snieg_swiezy'].pt_dirs.push(null);
-                            dataObj['snieg_swiezy'].pt_txts.push(snowData['snieg_swiezy'].pt_txts[i]);
-                            dataObj['snieg_swiezy'].pt_hov.push(snowData['snieg_swiezy'].pt_hov[i]);
-                            dataObj['snieg_swiezy'].pt_foreign.push(false);
-                            dataObj['snieg_swiezy'].pt_types.push('ODCZYT');
+                    if (snowData['snieg_swiezy']) {
+                        if (snowData['snieg_swiezy'].latestTimeMs) {
+                            dataObj['snieg_swiezy'].latestTimeMs = snowData['snieg_swiezy'].latestTimeMs;
+                        }
+                        if (Array.isArray(snowData['snieg_swiezy'].pt_lats)) {
+                            for (let i = 0; i < snowData['snieg_swiezy'].pt_lats.length; i++) {
+                                dataObj['snieg_swiezy'].pt_lats.push(snowData['snieg_swiezy'].pt_lats[i]);
+                                dataObj['snieg_swiezy'].pt_lons.push(snowData['snieg_swiezy'].pt_lons[i]);
+                                dataObj['snieg_swiezy'].pt_vals.push(snowData['snieg_swiezy'].pt_vals[i]);
+                                dataObj['snieg_swiezy'].pt_dirs.push(null);
+                                dataObj['snieg_swiezy'].pt_txts.push(snowData['snieg_swiezy'].pt_txts[i]);
+                                dataObj['snieg_swiezy'].pt_hov.push(snowData['snieg_swiezy'].pt_hov[i]);
+                                dataObj['snieg_swiezy'].pt_foreign.push(false);
+                                dataObj['snieg_swiezy'].pt_types.push('ODCZYT');
 
-                            realCoords['snieg_swiezy'].lats.push(snowData['snieg_swiezy'].pt_lats[i]);
-                            realCoords['snieg_swiezy'].lons.push(snowData['snieg_swiezy'].pt_lons[i]);
+                                realCoords['snieg_swiezy'].lats.push(snowData['snieg_swiezy'].pt_lats[i]);
+                                realCoords['snieg_swiezy'].lons.push(snowData['snieg_swiezy'].pt_lons[i]);
+                            }
                         }
                     }
                 }
@@ -2555,6 +2556,19 @@ window.initMapa = function() {
             const liveDataObj = await getIMGWLiveData(zmienna);
             if (liveDataObj) {
                 data = liveDataObj[zmienna];
+            }
+
+            const curParamName = (DEFAULT_ZMIENNE[zmienna] && DEFAULT_ZMIENNE[zmienna].nazwa) ? DEFAULT_ZMIENNE[zmienna].nazwa : zmienna;
+            const paramTimeMs = (data && data.latestTimeMs) ? data.latestTimeMs : 0;
+            if (paramTimeMs > 0) {
+                window.currentDisplayedTimeMs = paramTimeMs;
+                window.currentDisplayedParamName = curParamName;
+                updateDelayBadge(paramTimeMs, curParamName);
+            } else {
+                window.currentDisplayedTimeMs = 0;
+                window.currentDisplayedParamName = '';
+                const badge = document.getElementById('map-delay-badge');
+                if (badge) badge.style.display = 'none';
             }
 
             imgwLayerGroup.clearLayers();
