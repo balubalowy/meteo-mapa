@@ -813,7 +813,7 @@ window.initMapa = function() {
             'drawings':   { id: 'drawings',   name: 'Rysowanie',        visible: false, opacity: 100, pane: 'drawingsPane' },
             'stations':   { id: 'stations',   name: 'Stacje',           visible: true,  opacity: 100, pane: 'stationsPane' },
             'lightning':  { id: 'lightning',  name: 'Wyładowania',      visible: true,  opacity: 95,  pane: 'lightningPane' },
-            'radar':      { id: 'radar',      name: 'Radar',            visible: true,  opacity: 68,  pane: 'radarPane' },
+            'radar':      { id: 'radar',      name: 'Radar',            visible: false, opacity: 68,  pane: 'radarPane' },
             'inter':      { id: 'inter',      name: 'Interpolacja',     visible: true,  opacity: 88,  pane: 'weatherPane' },
             'sat_day':    { id: 'sat_day',    name: 'Satelita (dzień)', visible: true,  opacity: 68,  pane: 'satellitePane' },
             'sat_night':  { id: 'sat_night',  name: 'Satelita (noc)',   visible: false, opacity: 52,  pane: 'satelliteNightPane' }
@@ -824,8 +824,8 @@ window.initMapa = function() {
 
         // Wczytaj zapisany stan z localStorage jeśli istnieje
         try {
-            const savedLayers = localStorage.getItem('meteo_map_layers_v4');
-            const savedOrder = localStorage.getItem('meteo_map_order_v4');
+            const savedLayers = localStorage.getItem('meteo_map_layers_v5');
+            const savedOrder = localStorage.getItem('meteo_map_order_v5');
             if (savedLayers) {
                 const parsed = JSON.parse(savedLayers);
                 Object.keys(parsed).forEach(k => {
@@ -845,8 +845,8 @@ window.initMapa = function() {
 
         function saveLayerState() {
             try {
-                localStorage.setItem('meteo_map_layers_v4', JSON.stringify(window.MAP_LAYERS));
-                localStorage.setItem('meteo_map_order_v4', JSON.stringify(window.layerOrder));
+                localStorage.setItem('meteo_map_layers_v5', JSON.stringify(window.MAP_LAYERS));
+                localStorage.setItem('meteo_map_order_v5', JSON.stringify(window.layerOrder));
             } catch(e) {}
         }
 
