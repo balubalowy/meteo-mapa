@@ -3,20 +3,16 @@
 
 (function() {
     const PARAM_UNITS = {
-        'temp': 'degC',
-        'grunt': 'degC',
-        'rosy': 'degC',
-        'wilg': '%',
-        'lcl': 'm',
-        'wiatr_sr': 'km/h',
-        'wiatr': 'km/h',
-        'cisnienie': 'hPa',
-        'snieg': 'cm',
-        'snieg_swiezy': 'cm',
-        'snieg_zapas': 'mm',
-        'snieg_obciazenie': 'kN/m2',
-        'snieg_norma': '%'
+        'temp': 'degC', 'grunt': 'degC', 'rosy': 'degC', 'wilg': '%',
+        'lcl': 'm', 'wiatr_sr': 'km/h', 'wiatr': 'km/h', 'cisnienie': 'hPa',
+        'snieg': 'cm', 'snieg_swiezy': 'cm', 'snieg_zapas': 'mm',
+        'snieg_obciazenie': 'kN/m2', 'snieg_norma': '%'
     };
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const toUtcIso = (d) => d.toISOString().replace('.000Z', 'Z');
+    const formatHmUtc = (d) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    const formatYmdUtc = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
 
     function escapeCsv(val) {
         if (val === null || val === undefined) return '';
@@ -27,16 +23,56 @@
         return s;
     }
 
+    function resolveScope(pData) {
+        const okres = window.currentRenderedOkres || 'now';
+        let typDanych = pData?.typ_danych;
+        if (!typDanych) {
+            if (okres.startsWith('min')) typDanych = 'MINIMUM';
+            else if (okres.startsWith('max')) typDanych = 'MAKSIMUM';
+            else if (okres.startsWith('trend')) typDanych = 'TREND';
+            else typDanych = 'AKTUALNE';
+        }
+
+        const horyzont = pData?.horyzont || okres;
+        const dtDo = pData?.czas_do_utc ? new Date(pData.czas_do_utc) : new Date(pData?.latestTimeMs || Date.now());
+        const dtOd = pData?.czas_od_utc ? new Date(pData.czas_od_utc) : (
+            typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - 5 * 3600000)
+        );
+
+        let opis = '';
+        let fileTag = '';
+        const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeDoLocal = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const timeOdLocal = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+
+        if (typDanych === 'AKTUALNE') {
+            opis = `Aktualne: ${dataStr}, ${timeDoLocal} (${formatHmUtc(dtDo)} UTC)`;
+            fileTag = `aktualne_${formatYmdUtc(dtDo)}T${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+        } else if (typDanych === 'MINIMUM') {
+            opis = `Minimum (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
+            fileTag = `min5h_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+        } else if (typDanych === 'MAKSIMUM') {
+            opis = `Maksimum (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
+            fileTag = `max5h_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+        } else {
+            opis = `Trend (${horyzont}): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
+            fileTag = `${horyzont}_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+        }
+
+        return { typDanych, horyzont, czasOdIso: toUtcIso(dtOd), czasDoIso: toUtcIso(dtDo), opis, fileTag };
+    }
+
     function buildRowsFromParam(paramKey, pData) {
         if (!pData || !Array.isArray(pData.pt_lats)) return [];
         const rows = [];
         const count = pData.pt_lats.length;
         const unit = PARAM_UNITS[paramKey] || '';
+        const scope = resolveScope(pData);
 
         for (let i = 0; i < count; i++) {
             const meta = (pData.pt_meta && pData.pt_meta[i]) || {};
             const isModel = (pData.pt_types && pData.pt_types[i] === 'PROGNOZA');
-            const typ = isModel ? 'MODEL' : 'ODCZYT';
+            const typ = isModel ? 'MODEL' : (meta.typ || 'ODCZYT');
             const zrodlo = meta.zrodlo || (isModel ? 'ICON' : (pData.pt_foreign && pData.pt_foreign[i] ? 'ASOS' : 'IMGW'));
             const id = meta.id || '';
             const nazwa = meta.nazwa || '';
@@ -44,20 +80,19 @@
             const lon = pData.pt_lons[i];
             const wartosc = pData.pt_vals[i];
             const kierunek = (pData.pt_dirs && pData.pt_dirs[i] !== null && !isNaN(pData.pt_dirs[i])) ? pData.pt_dirs[i] : '';
-            const czas = meta.czas || (pData.latestTimeMs ? new Date(pData.latestTimeMs).toISOString().replace('.000Z', 'Z') : '');
+            const czas = meta.czas || (pData.latestTimeMs ? toUtcIso(new Date(pData.latestTimeMs)) : scope.czasDoIso);
 
             rows.push([
-                escapeCsv(id),
-                escapeCsv(nazwa),
-                lat.toFixed(4),
-                lon.toFixed(4),
+                escapeCsv(id), escapeCsv(nazwa),
+                lat.toFixed(4), lon.toFixed(4),
                 escapeCsv(paramKey),
                 (wartosc !== null && !isNaN(wartosc)) ? wartosc.toFixed(2) : '',
                 escapeCsv(unit),
-                kierunek !== '' ? Number(kierunek).toFixed(0) : '',
+                escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
+                escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso),
                 escapeCsv(czas),
-                escapeCsv(zrodlo),
-                escapeCsv(typ)
+                kierunek !== '' ? Number(kierunek).toFixed(0) : '',
+                escapeCsv(zrodlo), escapeCsv(typ)
             ]);
         }
         return rows;
@@ -75,11 +110,19 @@
         URL.revokeObjectURL(url);
     }
 
-    function generateTimestamp() {
-        const now = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}Z`;
-    }
+    window.updateExportMetaBadge = function(dataOverride) {
+        const el = document.getElementById('export-meta-info');
+        if (!el) return;
+        const data = dataOverride || window.currentRenderedData;
+        if (!data || !data.pt_lats || !data.pt_lats.length) {
+            el.textContent = 'Brak danych do eksportu';
+            el.style.color = 'var(--text-muted, #94a3b8)';
+            return;
+        }
+        const scope = resolveScope(data);
+        el.textContent = scope.opis;
+        el.style.color = 'var(--text-secondary, #cbd5e1)';
+    };
 
     function showStatus(btn, text, isError = false) {
         if (!btn) return;
@@ -90,8 +133,14 @@
         setTimeout(() => {
             btn.textContent = prevText;
             btn.style.borderColor = '';
-        }, 3000);
+        }, 3500);
     }
+
+    const CSV_HEADER = [
+        'id_stacji', 'nazwa', 'lat', 'lon', 'parametr', 'wartosc', 'jednostka',
+        'typ_danych', 'horyzont', 'czas_od_utc', 'czas_do_utc', 'czas_utc',
+        'kierunek_deg', 'zrodlo', 'typ'
+    ];
 
     window.exportCurrentParamCsv = async function(btn) {
         const paramEl = document.getElementById('imgw-zmienna');
@@ -105,13 +154,14 @@
                 return;
             }
 
-            const header = ['id_stacji', 'nazwa', 'lat', 'lon', 'parametr', 'wartosc', 'jednostka', 'kierunek_deg', 'czas_utc', 'zrodlo', 'typ'];
+            const scope = resolveScope(data);
             const rows = buildRowsFromParam(param, data);
-            const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-            const filename = `bmapa_${param}_${generateTimestamp()}.csv`;
+            const csv = [CSV_HEADER.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+            const filename = `bmapa_${param}_${scope.fileTag}.csv`;
             
             triggerDownload(csv, filename);
-            showStatus(btn, 'Pobrano CSV');
+            showStatus(btn, `${scope.typDanych === 'AKTUALNE' ? 'Pobrano aktualne' : 'Pobrano ' + scope.typDanych}`);
+            window.updateExportMetaBadge(data);
         } catch (err) {
             console.error('Błąd eksportu CSV:', err);
             showStatus(btn, 'Błąd eksportu', true);
@@ -133,12 +183,12 @@
                 return;
             }
 
-            const header = ['id_stacji', 'nazwa', 'lat', 'lon', 'parametr', 'wartosc', 'jednostka', 'kierunek_deg', 'czas_utc', 'zrodlo', 'typ'];
             const allRows = [];
-
+            let latestScope = null;
             for (const paramKey of Object.keys(dataObj)) {
                 const paramRows = buildRowsFromParam(paramKey, dataObj[paramKey]);
                 allRows.push(...paramRows);
+                if (!latestScope) latestScope = resolveScope(dataObj[paramKey]);
             }
 
             if (!allRows.length) {
@@ -146,11 +196,12 @@
                 return;
             }
 
-            const csv = [header.join(','), ...allRows.map(r => r.join(','))].join('\r\n');
-            const filename = `bmapa_wszystkie_${generateTimestamp()}.csv`;
+            const scope = latestScope || resolveScope(null);
+            const csv = [CSV_HEADER.join(','), ...allRows.map(r => r.join(','))].join('\r\n');
+            const filename = `bmapa_wszystkie_${scope.fileTag}.csv`;
             
             triggerDownload(csv, filename);
-            showStatus(btn, 'Pobrano CSV');
+            showStatus(btn, 'Pobrano wszystkie');
         } catch (err) {
             console.error('Błąd eksportu CSV wszystkich parametrów:', err);
             showStatus(btn, 'Błąd eksportu', true);

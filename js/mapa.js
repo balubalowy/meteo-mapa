@@ -2762,6 +2762,7 @@ window.initMapa = function() {
             window.currentRenderedData = data;
             window.currentRenderedParam = zmienna;
             window.currentRenderedOkres = okres;
+            if (window.updateExportMetaBadge) window.updateExportMetaBadge(data);
 
             const curParamName = (DEFAULT_ZMIENNE[zmienna] && DEFAULT_ZMIENNE[zmienna].nazwa) ? DEFAULT_ZMIENNE[zmienna].nazwa : zmienna;
             const paramTimeMs = (data && data.latestTimeMs) ? data.latestTimeMs : 0;
