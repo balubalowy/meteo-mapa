@@ -60,15 +60,29 @@
                 Stacje i pomiary
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">ŹRÓDŁO:</span>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">ODCZYT</span>
-                        <label class="toggle-switch" style="margin: 0;" title="Przełącznik źródła: ODCZYT (tylko stacje) / MODEL (stacje + model DWD ICON)">
-                            <input type="checkbox" id="chk-source-model" onchange="renderIMGW()">
-                            <span class="toggle-slider"></span>
-                        </label>
-                        <span style="font-size: 0.72rem; color: var(--accent-primary); font-weight: 600;">MODEL</span>
+                <div style="display: flex; flex-direction: column; gap: 6px; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">STACJE:</span>
+                        <div style="display: flex; gap: 4px;">
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Oficjalne stacje IMGW (odczyty godzinowe)">
+                                <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
+                                IMGW
+                            </label>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Rafał Raczyński (odczyty 10-minutowe)">
+                                <input type="radio" name="station-provider" id="provider-rr" value="rr" onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
+                                R.R. (10m)
+                            </label>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 5px;">
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">Dopełnienie ICON:</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.7rem; color: var(--text-secondary);">MODEL</span>
+                            <label class="toggle-switch" style="margin: 0;" title="Przełącznik: same stacje / stacje + model DWD ICON">
+                                <input type="checkbox" id="chk-source-model" onchange="renderIMGW()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -129,6 +143,19 @@
                             <option value="white">Białe</option>
                             <option value="black">Czarne</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Eksport danych CSV -->
+                <div style="background: var(--bg-secondary); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;">
+                    <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;">EKSPORT DANYCH (CSV / R):</span>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <button type="button" class="btn btn-ghost" onclick="window.exportCurrentParamCsv && window.exportCurrentParamCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV z widocznym na mapie parametrem">
+                            CSV: bieżący
+                        </button>
+                        <button type="button" class="btn btn-ghost" onclick="window.exportAllParamsCsv && window.exportAllParamsCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV ze wszystkimi dostępnymi stacjami i parametrami">
+                            CSV: wszystkie
+                        </button>
                     </div>
                 </div>
             </div>
@@ -276,6 +303,9 @@
   
   <!-- Moduł pokrywy śnieżnej IMGW -->
   <script src="js/snow.js"></script>
+
+  <!-- Moduł eksportu danych CSV -->
+  <script src="js/export.js"></script>
 
   <!-- Core Standalone Map Engine -->
   <script src="js/mapa.js"></script>

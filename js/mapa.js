@@ -2074,10 +2074,28 @@ window.initMapa = function() {
             return minDist;
         }
 
+        // Czas pomiaru do ISO 8601 UTC (eksport CSV). Napisy bez strefy traktowane jako UTC,
+        // zgodnie z dotychczasowym parsowaniem IMGW/R.R. (Date.UTC) i domyślną strefą GMT w Open-Meteo.
+        function toIsoUtc(input) {
+            if (input === null || input === undefined || input === '') return '';
+            let ms = NaN;
+            if (typeof input === 'number') {
+                ms = input;
+            } else {
+                const s = String(input).trim();
+                const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
+                ms = Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
+            }
+            return (isNaN(ms) || ms <= 0) ? '' : new Date(ms).toISOString().replace('.000Z', 'Z');
+        }
+
         const imgwLiveCacheByMode = {};
 
         async function getIMGWLiveData(targetParam = null) {
             const chkModel = document.getElementById('chk-source-model');
+            const providerRR = document.getElementById('provider-rr');
+            const isRR = providerRR ? providerRR.checked : false;
+
             let dataMode = 'stations';
             if (chkModel) {
                 dataMode = chkModel.checked ? 'hybrid' : 'stations';
@@ -2085,10 +2103,11 @@ window.initMapa = function() {
                 const modeSelect = document.getElementById('imgw-data-mode');
                 dataMode = modeSelect ? modeSelect.value : 'stations';
             }
+            const cacheKey = `${dataMode}_${isRR ? 'rr' : 'imgw'}`;
             const now = Date.now();
             
             // Jeśli żądany parametr to śnieg, a w pamięci brak punktów śniegu, wymuś pobranie
-            const cached = imgwLiveCacheByMode[dataMode];
+            const cached = imgwLiveCacheByMode[cacheKey];
             const isSnowParam = targetParam === 'snieg' || targetParam === 'snieg_swiezy';
             const snowMissingInCache = isSnowParam && cached && cached.data && (!cached.data[targetParam] || !cached.data[targetParam].pt_lats.length);
 
@@ -2099,19 +2118,26 @@ window.initMapa = function() {
             const loadingEl = document.getElementById('imgw-loading');
             if (loadingEl) {
                 loadingEl.style.display = 'flex';
-                loadingEl.innerHTML = '<i data-lucide="loader" class="spin"></i> Pobieranie danych meteorologicznych...';
+                loadingEl.innerHTML = isRR
+                    ? '<i data-lucide="loader" class="spin"></i> Pobieranie danych 10m (R.R.)...'
+                    : '<i data-lucide="loader" class="spin"></i> Pobieranie danych meteorologicznych...';
             }
             
             try {
                 // Równoległe pobieranie wymaganych źródeł w zależności od trybu
                 let reqMeteo = Promise.resolve([]);
+                let reqRR = Promise.resolve([]);
                 let reqSynop = Promise.resolve([]);
                 let reqAsos = Promise.resolve([]);
                 let reqSnow = Promise.resolve(null);
                 let reqModel = Promise.resolve({ pl: [], foreign: [] });
 
                 if (dataMode === 'stations' || dataMode === 'hybrid') {
-                    reqMeteo = fetch('https://danepubliczne.imgw.pl/api/data/meteo/').then(r => r.ok ? r.json() : []).catch(() => []);
+                    if (isRR) {
+                        reqRR = fetch('https://rafalraczynski.com.pl/imgw/maps-2/getJSON.php?type=maps').then(r => r.ok ? r.json() : []).catch(() => []);
+                    } else {
+                        reqMeteo = fetch('https://danepubliczne.imgw.pl/api/data/meteo/').then(r => r.ok ? r.json() : []).catch(() => []);
+                    }
                     reqSynop = fetch('https://danepubliczne.imgw.pl/api/data/synop').then(r => r.ok ? r.json() : []).catch(() => []);
                     reqAsos = fetchForeignASOSData();
                     if (window.getSnowData) {
@@ -2122,8 +2148,9 @@ window.initMapa = function() {
                     reqModel = fetchIconModelData();
                 }
 
-                const [rawData, synopData, asosData, snowData, modelData] = await Promise.all([
+                const [rawData, rrData, synopData, asosData, snowData, modelData] = await Promise.all([
                     reqMeteo,
+                    reqRR,
                     reqSynop,
                     reqAsos,
                     reqSnow,
@@ -2131,16 +2158,16 @@ window.initMapa = function() {
                 ]);
 
                 const dataObj = {
-                    'temp': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'cisnienie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'wiatr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'wiatr_sr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'rosy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'lcl': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'wilg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'grunt': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-                    'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 }
+                    'temp': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'cisnienie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'wiatr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'wiatr_sr': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'rosy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'lcl': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'wilg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'grunt': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+                    'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 }
                 };
 
                 // Śledzenie koordynatów stacji fizycznych do deduplikacji w trybie hybrydowym
@@ -2202,14 +2229,128 @@ window.initMapa = function() {
                         );
                         dataObj['cisnienie'].pt_foreign.push(false);
                         dataObj['cisnienie'].pt_types.push('ODCZYT');
+                        dataObj['cisnienie'].pt_meta.push({
+                            id: String(sid),
+                            nazwa: sName,
+                            zrodlo: 'SYNOP',
+                            czas: (st.data_pomiaru && sHour) ? toIsoUtc(`${st.data_pomiaru} ${String(sHour).padStart(2, '0')}:00:00`) : ''
+                        });
 
                         realCoords['cisnienie'].lats.push(coord.lat);
                         realCoords['cisnienie'].lons.push(coord.lon);
                     }
                 }
 
-                // 2. STACJE METEO IMGW (Polska - automatyczne stacje telemetryczne)
-                if (Array.isArray(rawData) && dataMode !== 'model') {
+                // 2. STACJE METEO (Polska - automatyczne stacje telemetryczne)
+                if (isRR && Array.isArray(rrData) && dataMode !== 'model') {
+                    const COMPASS_TO_DEG = {
+                        'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+                        'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+                        'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+                        'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+                    };
+
+                    const isDataValidRR = (dateStr) => {
+                        if (!dateStr) return false;
+                        const parts = String(dateStr).split(/[- :]/);
+                        if (parts.length < 5) return false;
+                        const dataDate = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5] || 0));
+                        const diffHours = (Date.now() - dataDate.getTime()) / (1000 * 60 * 60);
+                        return diffHours <= 3.5 && diffHours >= -1;
+                    };
+
+                    const formatTimeRR = (dateStr) => {
+                        if (!dateStr) return '';
+                        const parts = String(dateStr).split(/[- :]/);
+                        if (parts.length >= 5) {
+                            const utcDate = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], parts[3], parts[4], parts[5] || 0));
+                            const localTime = utcDate.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'});
+                            return ` <span style="font-size:0.75rem; color:#a1a1aa;">(${localTime})</span>`;
+                        }
+                        return '';
+                    };
+
+                    for (const st of rrData) {
+                        if (st.isModel) continue;
+
+                        const lat = parseFloat(st.lat);
+                        const lon = parseFloat(st.lng !== undefined ? st.lng : st.lon);
+                        if (isNaN(lat) || isNaN(lon)) continue;
+
+                        const nazwa = st.statName || 'Stacja IMGW';
+                        const kod = String(st.statId || '');
+                        if (kod) {
+                            window._stationMetaMap = window._stationMetaMap || {};
+                            window._stationMetaMap[kod] = { lat, lon, nazwa };
+                        }
+
+                        const timeStr = st.tempLastTime || st.strTime;
+                        const temp = (st.temp !== null && st.temp !== undefined) ? parseFloat(st.temp) : NaN;
+                        const wilg = (st.wilgBezw !== null && st.wilgBezw !== undefined) ? parseFloat(st.wilgBezw) : NaN;
+                        const wiatr_sr = (st.predWiatru !== null && st.predWiatru !== undefined) ? parseFloat(st.predWiatru) : NaN;
+                        const wiatr_max10 = (st.predWiatruMax10min !== null && st.predWiatruMax10min !== undefined) ? parseFloat(st.predWiatruMax10min) : NaN;
+
+                        let wiatr_poryw = NaN;
+                        if (!isNaN(wiatr_max10) && !isNaN(wiatr_sr)) {
+                            wiatr_poryw = Math.max(wiatr_max10, wiatr_sr);
+                        } else if (!isNaN(wiatr_max10)) {
+                            wiatr_poryw = wiatr_max10;
+                        } else if (!isNaN(wiatr_sr)) {
+                            wiatr_poryw = wiatr_sr;
+                        }
+
+                        let wiatr_kier = null;
+                        if (typeof st.kierWiatru === 'string' && COMPASS_TO_DEG[st.kierWiatru.trim().toUpperCase()] !== undefined) {
+                            wiatr_kier = COMPASS_TO_DEG[st.kierWiatru.trim().toUpperCase()];
+                        } else if (typeof st.kierWiatru === 'number' || (st.kierWiatru && !isNaN(parseFloat(st.kierWiatru)))) {
+                            wiatr_kier = parseFloat(st.kierWiatru);
+                        }
+
+                        const dewPoint = calculateDewPoint(temp, wilg);
+                        let lcl_m = NaN;
+                        if (!isNaN(temp) && dewPoint !== null && !isNaN(dewPoint)) {
+                            lcl_m = Math.round(125 * Math.max(0, temp - dewPoint));
+                        }
+
+                        const addDataRR = (zmienna, val, txt, hov, dir) => {
+                            if (isNaN(val) || !isDataValidRR(timeStr)) return;
+                            if (timeStr) {
+                                const parts = String(timeStr).split(/[- :]/);
+                                if (parts.length >= 5) {
+                                    const timeMs = Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), parseInt(parts[3], 10), parseInt(parts[4], 10), parts[5] ? parseInt(parts[5], 10) : 0);
+                                    if (timeMs <= Date.now() && timeMs > (dataObj[zmienna].latestTimeMs || 0)) {
+                                        dataObj[zmienna].latestTimeMs = timeMs;
+                                    }
+                                }
+                            }
+                            dataObj[zmienna].pt_lats.push(lat);
+                            dataObj[zmienna].pt_lons.push(lon);
+                            dataObj[zmienna].pt_vals.push(val);
+                            dataObj[zmienna].pt_dirs.push(dir !== undefined ? dir : null);
+                            dataObj[zmienna].pt_txts.push(txt);
+                            dataObj[zmienna].pt_hov.push(
+                                `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">` +
+                                `<b style="font-size:0.85rem;">${nazwa}</b>` +
+                                `<span class="badge-odczyt" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">R.R. 10m</span>` +
+                                `</div>` +
+                                `${hov}`
+                            );
+                            dataObj[zmienna].pt_foreign.push(false);
+                            dataObj[zmienna].pt_types.push('ODCZYT');
+                            dataObj[zmienna].pt_meta.push({ id: kod, nazwa, zrodlo: 'RR', czas: toIsoUtc(timeStr) });
+
+                            realCoords[zmienna].lats.push(lat);
+                            realCoords[zmienna].lons.push(lon);
+                        };
+
+                        addDataRR('temp', temp, temp?.toFixed(1) + '°', `T2m: <b>${temp?.toFixed(1)}°C</b>${formatTimeRR(timeStr)}`, undefined);
+                        addDataRR('wilg', wilg, wilg?.toFixed(0) + '%', `RH: <b>${wilg?.toFixed(0)}%</b>${formatTimeRR(timeStr)}`, undefined);
+                        addDataRR('rosy', dewPoint, dewPoint?.toFixed(1) + '°', `Td: <b>${dewPoint?.toFixed(1)}°C</b>${formatTimeRR(timeStr)}`, undefined);
+                        addDataRR('lcl', lcl_m, !isNaN(lcl_m) ? (lcl_m + 'm') : '', `LCL: <b>${lcl_m} m n.p.g.</b>${formatTimeRR(timeStr)}<br>T2m: ${temp?.toFixed(1)}°C, Td: ${dewPoint?.toFixed(1)}°C`, undefined);
+                        addDataRR('wiatr', wiatr_poryw, wiatr_poryw?.toFixed(0), `Poryw Wiatru (10m): <b>${wiatr_poryw?.toFixed(0)} km/h</b>${formatTimeRR(timeStr)}`, wiatr_kier);
+                        addDataRR('wiatr_sr', wiatr_sr, wiatr_sr?.toFixed(0), `Śr. Wiatr (10m): <b>${wiatr_sr?.toFixed(0)} km/h</b>${formatTimeRR(timeStr)}`, wiatr_kier);
+                    }
+                } else if (!isRR && Array.isArray(rawData) && dataMode !== 'model') {
                     for (const st of rawData) {
                         const lat = parseFloat(st.lat);
                         const lon = parseFloat(st.lon);
@@ -2289,6 +2430,7 @@ window.initMapa = function() {
                             );
                             dataObj[zmienna].pt_foreign.push(false);
                             dataObj[zmienna].pt_types.push('ODCZYT');
+                            dataObj[zmienna].pt_meta.push({ id: kod, nazwa, zrodlo: 'IMGW', czas: toIsoUtc(t_str) });
                             
                             realCoords[zmienna].lats.push(lat);
                             realCoords[zmienna].lons.push(lon);
@@ -2352,6 +2494,7 @@ window.initMapa = function() {
                             );
                             dataObj[zmienna].pt_foreign.push(true);
                             dataObj[zmienna].pt_types.push('ODCZYT');
+                            dataObj[zmienna].pt_meta.push({ id: st.station || '', nazwa: sName, zrodlo: 'ASOS', czas: toIsoUtc(st.valid) });
 
                             realCoords[zmienna].lats.push(lat);
                             realCoords[zmienna].lons.push(lon);
@@ -2390,6 +2533,8 @@ window.initMapa = function() {
                                 dataObj['snieg'].pt_hov.push(snowData['snieg'].pt_hov[i]);
                                 dataObj['snieg'].pt_foreign.push(false);
                                 dataObj['snieg'].pt_types.push('ODCZYT');
+                                dataObj['snieg'].pt_meta.push((snowData['snieg'].pt_meta && snowData['snieg'].pt_meta[i])
+                                    || { id: '', nazwa: '', zrodlo: 'SNIEG', czas: toIsoUtc(snowData['snieg'].latestTimeMs) });
 
                                 realCoords['snieg'].lats.push(snowData['snieg'].pt_lats[i]);
                                 realCoords['snieg'].lons.push(snowData['snieg'].pt_lons[i]);
@@ -2410,6 +2555,8 @@ window.initMapa = function() {
                                 dataObj['snieg_swiezy'].pt_hov.push(snowData['snieg_swiezy'].pt_hov[i]);
                                 dataObj['snieg_swiezy'].pt_foreign.push(false);
                                 dataObj['snieg_swiezy'].pt_types.push('ODCZYT');
+                                dataObj['snieg_swiezy'].pt_meta.push((snowData['snieg_swiezy'].pt_meta && snowData['snieg_swiezy'].pt_meta[i])
+                                    || { id: '', nazwa: '', zrodlo: 'SNIEG', czas: toIsoUtc(snowData['snieg_swiezy'].latestTimeMs) });
 
                                 realCoords['snieg_swiezy'].lats.push(snowData['snieg_swiezy'].pt_lats[i]);
                                 realCoords['snieg_swiezy'].lons.push(snowData['snieg_swiezy'].pt_lons[i]);
@@ -2471,6 +2618,7 @@ window.initMapa = function() {
                                 );
                                 dataObj[zmienna].pt_foreign.push(isForeignList);
                                 dataObj[zmienna].pt_types.push('PROGNOZA');
+                                dataObj[zmienna].pt_meta.push({ id: '', nazwa: sName, zrodlo: 'ICON', czas: toIsoUtc(cur.time) });
 
                                 if (extra) {
                                     if (!dataObj[zmienna].pt_extras) dataObj[zmienna].pt_extras = [];
@@ -2510,7 +2658,7 @@ window.initMapa = function() {
                     }
                 }
                 
-                imgwLiveCacheByMode[dataMode] = {
+                imgwLiveCacheByMode[cacheKey] = {
                     data: dataObj,
                     time: now
                 };
@@ -2542,8 +2690,52 @@ window.initMapa = function() {
             }
         };
 
+        // Publiczne API silnika dla modułów zewnętrznych (history.js w portalu meteo, export.js)
+        window.BMapaApi = {
+            getLiveData: getIMGWLiveData,
+            DEFAULT_ZMIENNE,
+            calculateDewPoint
+        };
+        window.getMapExportData = async function(param = null) {
+            return await getIMGWLiveData(param);
+        };
+
+        // Horyzont inny niż 'now' wymaga modułu history.js i włączonej bazy RTDB
+        function resolveOkres() {
+            const okresSelect = document.getElementById('imgw-okres');
+            const okres = okresSelect ? okresSelect.value : 'now';
+            const historyReady = typeof window.getIMGWHistoryData === 'function'
+                && typeof window.isHistoryDbEnabled === 'function'
+                && window.isHistoryDbEnabled();
+            if (okres !== 'now' && !historyReady) {
+                if (okresSelect) okresSelect.value = 'now';
+                return 'now';
+            }
+            return okres;
+        }
+
+        async function loadHistoryData(zmienna, okres, loadingEl) {
+            if (loadingEl) {
+                loadingEl.style.display = 'flex';
+                loadingEl.innerHTML = '<i data-lucide="loader" class="spin"></i> Obliczanie trendu i historii z bazy...';
+            }
+            try {
+                const data = await window.getIMGWHistoryData(zmienna, okres);
+                if (data && data.error) {
+                    if (loadingEl) loadingEl.innerHTML = `<span style="color:#fbbf24; font-size:0.85rem;">${data.error}</span>`;
+                    return null;
+                }
+                if (loadingEl) loadingEl.style.display = 'none';
+                return data;
+            } catch (e) {
+                console.error("Błąd pobierania historii Firebase:", e);
+                if (loadingEl) loadingEl.innerHTML = `<span style="color:#f87171;">Błąd połączenia z Firebase (${e.message}). Upewnij się, że jesteś zalogowany.</span>`;
+                return null;
+            }
+        }
+
         window.renderIMGW = async function() {
-            const okres = 'now';
+            const okres = resolveOkres();
             const zmienna = document.getElementById('imgw-zmienna').value;
             const loadingEl = document.getElementById('imgw-loading');
             
@@ -2553,10 +2745,23 @@ window.initMapa = function() {
             }
             
             let data = null;
-            const liveDataObj = await getIMGWLiveData(zmienna);
-            if (liveDataObj) {
-                data = liveDataObj[zmienna];
+            if (okres === 'now') {
+                const liveDataObj = await getIMGWLiveData(zmienna);
+                if (liveDataObj) {
+                    data = liveDataObj[zmienna];
+                }
+            } else {
+                data = await loadHistoryData(zmienna, okres, loadingEl);
+                if (!data) {
+                    imgwLayerGroup.clearLayers();
+                    if (idwOverlay) { map.removeLayer(idwOverlay); idwOverlay = null; }
+                    return;
+                }
             }
+
+            window.currentRenderedData = data;
+            window.currentRenderedParam = zmienna;
+            window.currentRenderedOkres = okres;
 
             const curParamName = (DEFAULT_ZMIENNE[zmienna] && DEFAULT_ZMIENNE[zmienna].nazwa) ? DEFAULT_ZMIENNE[zmienna].nazwa : zmienna;
             const paramTimeMs = (data && data.latestTimeMs) ? data.latestTimeMs : 0;
@@ -2578,7 +2783,11 @@ window.initMapa = function() {
             }
 
             if (!data || !data.pt_lats || !data.pt_lats.length) {
-                if (loadingEl) loadingEl.style.display = 'none';
+                if (loadingEl) {
+                    loadingEl.style.display = 'flex';
+                    loadingEl.innerHTML = '<span style="color:var(--text-secondary); font-size:0.85rem;">Brak danych pomiarowych dla wybranego parametru w tym źródle.</span>';
+                    setTimeout(() => { if (loadingEl) loadingEl.style.display = 'none'; }, 3000);
+                }
                 return;
             }
             
@@ -2729,6 +2938,13 @@ window.initMapa = function() {
 
         lucide.createIcons();
         setTimeout(() => map.invalidateSize(), 500);
+
+        window.addEventListener('bmeteo-authenticated', () => {
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+                window.renderIMGW();
+            }, 250);
+        });
     }, 200);
 };
 

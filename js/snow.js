@@ -184,11 +184,11 @@
     window.getSnowData = async function() {
         const records = await fetchSnowRecords();
         const dataObj = {
-            'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-            'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-            'snieg_zapas': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-            'snieg_obciazenie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 },
-            'snieg_norma': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], latestTimeMs: 0 }
+            'snieg': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+            'snieg_swiezy': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+            'snieg_zapas': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+            'snieg_obciazenie': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 },
+            'snieg_norma': { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 }
         };
 
         records.forEach(r => {
@@ -201,6 +201,7 @@
             const proc = r.procent_normy || 0;
             const dateStr = r.data ? ` (${r.data})` : '';
 
+            let isoDate = '';
             if (r.data) {
                 const parts = r.data.split('.');
                 if (parts.length === 3) {
@@ -209,10 +210,12 @@
                         dataObj['snieg'].latestTimeMs = timeMs;
                         dataObj['snieg_swiezy'].latestTimeMs = timeMs;
                     }
+                    isoDate = new Date(timeMs).toISOString().replace('.000Z', 'Z');
                 }
             }
 
             const swiezyVal = (r.swiezy != null && !isNaN(r.swiezy)) ? r.swiezy : 0;
+            const metaItem = { id: String(r.kod || r.id || ''), nazwa: nazwa, zrodlo: 'SNIEG', czas: isoDate };
 
             const snowTooltip = 
                 `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">` +
@@ -234,6 +237,7 @@
             dataObj['snieg'].pt_hov.push(snowTooltip);
             dataObj['snieg'].pt_foreign.push(false);
             dataObj['snieg'].pt_types.push('ODCZYT');
+            dataObj['snieg'].pt_meta.push(metaItem);
 
             dataObj['snieg_swiezy'].pt_lats.push(lat);
             dataObj['snieg_swiezy'].pt_lons.push(lon);
@@ -243,6 +247,7 @@
             dataObj['snieg_swiezy'].pt_hov.push(snowTooltip);
             dataObj['snieg_swiezy'].pt_foreign.push(false);
             dataObj['snieg_swiezy'].pt_types.push('ODCZYT');
+            dataObj['snieg_swiezy'].pt_meta.push(metaItem);
 
             if (zapas != null) {
                 dataObj['snieg_zapas'].pt_lats.push(lat);
@@ -253,6 +258,7 @@
                 dataObj['snieg_zapas'].pt_hov.push(snowTooltip);
                 dataObj['snieg_zapas'].pt_foreign.push(false);
                 dataObj['snieg_zapas'].pt_types.push('ODCZYT');
+                dataObj['snieg_zapas'].pt_meta.push(metaItem);
             }
 
             dataObj['snieg_obciazenie'].pt_lats.push(lat);
@@ -263,6 +269,7 @@
             dataObj['snieg_obciazenie'].pt_hov.push(snowTooltip);
             dataObj['snieg_obciazenie'].pt_foreign.push(false);
             dataObj['snieg_obciazenie'].pt_types.push('ODCZYT');
+            dataObj['snieg_obciazenie'].pt_meta.push(metaItem);
 
             dataObj['snieg_norma'].pt_lats.push(lat);
             dataObj['snieg_norma'].pt_lons.push(lon);
@@ -272,6 +279,7 @@
             dataObj['snieg_norma'].pt_hov.push(snowTooltip);
             dataObj['snieg_norma'].pt_foreign.push(false);
             dataObj['snieg_norma'].pt_types.push('ODCZYT');
+            dataObj['snieg_norma'].pt_meta.push(metaItem);
         });
 
         return dataObj;
