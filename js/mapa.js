@@ -1,5 +1,5 @@
 // js/mapa.js
-// Główny silnik aplikacji B-Mapa - orkiestracja modułów
+// Główny punkt wejścia aplikacji B-Mapa - orkiestracja modułów
 
 import { initMap } from './map/core.js';
 import { initGeoman } from './map/drawing.js';
@@ -9,47 +9,40 @@ import { initBoundaries, initLayerManager } from './map/layers.js';
 import { renderIMGW, updateIsoStepLabel } from './map/renderer.js';
 import { initUIControls } from './map/ui.js';
 
-window.initMapa = function() {
-    setTimeout(() => {
-        const { map, basemaps } = initMap('premium-map');
-        initGeoman(map);
+let activeMapInstance = null;
 
-        const radarComponents = initRadar(map);
-        const boundariesGroup = initBoundaries(map);
-        const lightningGroup = initLightning(map);
+export function initMapa() {
+    const { map, basemaps } = initMap('premium-map');
+    activeMapInstance = map;
 
-        initLayerManager(map, {
-            ...radarComponents,
-            boundariesGroup,
-            lightningGroup
-        });
+    initGeoman(map);
+    const radarComponents = initRadar(map);
+    const boundariesGroup = initBoundaries(map);
+    const lightningGroup = initLightning(map);
 
-        initUIControls(map);
+    initLayerManager(map, { ...radarComponents, boundariesGroup, lightningGroup });
+    initUIControls(map);
 
-        window.renderIMGW = () => renderIMGW(map);
-        window.updateIsoStepLabel = updateIsoStepLabel;
+    window.renderIMGW = () => renderIMGW(map);
+    window.updateIsoStepLabel = updateIsoStepLabel;
 
-        L.control.layers(basemaps, {}, { position: 'topright' }).addTo(map);
-
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-
-        // Pierwsze wyrenderowanie danych telemetrycznych
-        window.renderIMGW();
-
-        // Ponowne odświeżenie danych po zalogowaniu kontem z uprawnieniami
-        window.addEventListener('bmeteo-authenticated', () => {
-            setTimeout(() => {
-                if (map) map.invalidateSize();
-                window.renderIMGW();
-            }, 250);
-        });
-
-        setTimeout(() => map.invalidateSize(), 500);
-    }, 150);
-};
-
-// Automatyczny start mapy po załadowaniu drzewa DOM
-document.addEventListener('DOMContentLoaded', () => {
+    L.control.layers(basemaps, {}, { position: 'topright' }).addTo(map);
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    window.initMapa();
-});
+
+    window.renderIMGW();
+
+    window.addEventListener('bmeteo-authenticated', () => {
+        if (activeMapInstance) activeMapInstance.invalidateSize();
+        window.renderIMGW();
+    });
+
+    requestAnimationFrame(() => map.invalidateSize());
+}
+
+window.initMapa = initMapa;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMapa);
+} else {
+    initMapa();
+}
