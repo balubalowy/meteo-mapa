@@ -67,7 +67,8 @@
         return (vNow > 120 || vPast > 120) && !nameUp.includes('ŚNIEŻKA') && !nameUp.includes('KASPROWY');
     }
 
-    function pushTrendPoint(result, ctx, meta, vNow, vPast) {
+    function pushTrendPoint(result, ctx, ptData) {
+        const { meta, vNow, vPast } = ptData;
         const delta = Math.round((vNow - vPast) * 10) / 10, rate = Math.round((delta / ctx.dtHours) * 10) / 10;
         const znak = rate > 0 ? '+' : '', dZnak = delta > 0 ? '+' : '';
         result.pt_lats.push(meta.lat); result.pt_lons.push(meta.lon); result.pt_vals.push(rate);
@@ -108,7 +109,7 @@
             const vPast = getStationVal(pastMap.get(kod), zmienna);
             if (!meta || vNow === null || vPast === null) continue;
             if (isWindOutlier(zmienna, meta, vNow, vPast)) continue;
-            pushTrendPoint(result, ctx, meta, vNow, vPast);
+            pushTrendPoint(result, ctx, { meta, vNow, vPast });
         }
         return result;
     }

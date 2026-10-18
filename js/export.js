@@ -1,4 +1,4 @@
-// export.js - Eksport danych telemetrycznych i synoptycznych do formatu CSV
+// js/export.js - Eksport danych telemetrycznych i synoptycznych do formatu CSV
 // Kompatybilny z pakietami sf / readr w R oraz Microsoft Excel (UTF-8 BOM).
 
 (function() {
@@ -9,78 +9,104 @@
         'snieg_obciazenie': 'kN/m2', 'snieg_norma': '%'
     };
 
-    const pad = (n) => String(n).padStart(2, '0');
-    const toUtcIso = (d) => d.toISOString().replace('.000Z', 'Z');
-    const formatHmUtc = (d) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-    const formatYmdUtc = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+    const pad = n => String(n).padStart(2, '0');
+    const toUtcIso = d => d.toISOString().replace('.000Z', 'Z');
+    const formatHmUtc = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    const formatYmdUtc = d => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
 
     function escapeCsv(val) {
         if (val === null || val === undefined) return '';
         const s = String(val);
-        if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
-            return `"${s.replace(/"/g, '""')}"`;
+        return (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r'))
+            ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+
+    function determineDataType(pData, okres) {
+        if (pData?.typ_danych) return pData.typ_danych;
+        if (okres.startsWith('min')) return 'MINIMUM';
+        if (okres.startsWith('max')) return 'MAKSIMUM';
+        if (okres.startsWith('trend')) return 'TREND';
+        return 'AKTUALNE';
+    }
+
+    function determineDateRange(pData, typDanych) {
+        const dtDo = pData?.czas_do_utc ? new Date(pData.czas_do_utc) : new Date(pData?.latestTimeMs || Date.now());
+        if (pData?.czas_od_utc) return { dtOd: new Date(pData.czas_od_utc), dtDo };
+        const dtOd = typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - 5 * 3600000);
+        return { dtOd, dtDo };
+    }
+
+    function formatScopeDescriptions(typDanych, horyzont, dtOd, dtDo) {
+        const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeDoLocal = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const timeOdLocal = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const ymd = formatYmdUtc(dtDo);
+        const hmDo = `${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}`;
+        const hmOd = `${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}`;
+
+        if (typDanych === 'AKTUALNE') {
+            return {
+                opis: `Aktualne: ${dataStr}, ${timeDoLocal} (${formatHmUtc(dtDo)} UTC)`,
+                fileTag: `aktualne_${ymd}T${hmDo}Z`
+            };
         }
-        return s;
+        if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
+            const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
+            const tag = typDanych === 'MINIMUM' ? 'min5h' : 'max5h';
+            return {
+                opis: `${lbl} (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`,
+                fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z`
+            };
+        }
+        return {
+            opis: `Trend (${horyzont}): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`,
+            fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z`
+        };
     }
 
     function resolveScope(pData) {
         const okres = window.currentRenderedOkres || 'now';
-        let typDanych = pData?.typ_danych;
-        if (!typDanych) {
-            if (okres.startsWith('min')) typDanych = 'MINIMUM';
-            else if (okres.startsWith('max')) typDanych = 'MAKSIMUM';
-            else if (okres.startsWith('trend')) typDanych = 'TREND';
-            else typDanych = 'AKTUALNE';
-        }
-
+        const typDanych = determineDataType(pData, okres);
         const horyzont = pData?.horyzont || okres;
-        const dtDo = pData?.czas_do_utc ? new Date(pData.czas_do_utc) : new Date(pData?.latestTimeMs || Date.now());
-        const dtOd = pData?.czas_od_utc ? new Date(pData.czas_od_utc) : (
-            typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - 5 * 3600000)
-        );
-
-        let opis = '', fileTag = '';
-        const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const timeDoLocal = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-        const timeOdLocal = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-        const ymd = formatYmdUtc(dtDo), hmDo = `${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}`, hmOd = `${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}`;
-
-        if (typDanych === 'AKTUALNE') {
-            opis = `Aktualne: ${dataStr}, ${timeDoLocal} (${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `aktualne_${ymd}T${hmDo}Z`;
-        } else if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
-            const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
-            opis = `${lbl} (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `${typDanych === 'MINIMUM' ? 'min5h' : 'max5h'}_${ymd}T${hmOd}-${hmDo}Z`;
-        } else {
-            opis = `Trend (${horyzont}): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `${horyzont}_${ymd}T${hmOd}-${hmDo}Z`;
-        }
+        const { dtOd, dtDo } = determineDateRange(pData, typDanych);
+        const { opis, fileTag } = formatScopeDescriptions(typDanych, horyzont, dtOd, dtDo);
 
         return { typDanych, horyzont, czasOdIso: toUtcIso(dtOd), czasDoIso: toUtcIso(dtDo), opis, fileTag };
     }
 
-    function buildRowsFromParam(paramKey, pData) {
-        if (!pData || !Array.isArray(pData.pt_lats)) return [];
-        const rows = [], count = pData.pt_lats.length, unit = PARAM_UNITS[paramKey] || '', scope = resolveScope(pData);
+    function resolvePointSource(meta, isModel, isForeign) {
+        if (meta.zrodlo) return meta.zrodlo;
+        if (isModel) return 'ICON';
+        return isForeign ? 'ASOS' : 'IMGW';
+    }
 
-        for (let i = 0; i < count; i++) {
-            const meta = (pData.pt_meta && pData.pt_meta[i]) || {};
-            const isModel = (pData.pt_types && pData.pt_types[i] === 'PROGNOZA');
+    function buildRowsFromParam(paramKey, pData) {
+        if (!pData?.pt_lats?.length) return [];
+        const rows = [];
+        const unit = PARAM_UNITS[paramKey] || '';
+        const scope = resolveScope(pData);
+
+        for (let i = 0; i < pData.pt_lats.length; i++) {
+            const meta = pData.pt_meta?.[i] || {};
+            const isModel = pData.pt_types?.[i] === 'PROGNOZA';
+            const isForeign = Boolean(pData.pt_foreign?.[i]);
             const typ = isModel ? 'MODEL' : (meta.typ || 'ODCZYT');
-            const zrodlo = meta.zrodlo || (isModel ? 'ICON' : (pData.pt_foreign && pData.pt_foreign[i] ? 'ASOS' : 'IMGW'));
-            const lat = pData.pt_lats[i], lon = pData.pt_lons[i], wartosc = pData.pt_vals[i];
-            const kierunek = (pData.pt_dirs && pData.pt_dirs[i] !== null && !isNaN(pData.pt_dirs[i])) ? pData.pt_dirs[i] : '';
+            const zrodlo = resolvePointSource(meta, isModel, isForeign);
+
+            const lat = pData.pt_lats[i];
+            const lon = pData.pt_lons[i];
+            const val = pData.pt_vals[i];
+            const dir = pData.pt_dirs?.[i];
+            const dirTxt = (dir !== null && dir !== undefined && !isNaN(dir)) ? Number(dir).toFixed(0) : '';
+            const valTxt = (val !== null && val !== undefined && !isNaN(val)) ? val.toFixed(2) : '';
             const czas = meta.czas || (pData.latestTimeMs ? toUtcIso(new Date(pData.latestTimeMs)) : scope.czasDoIso);
 
             rows.push([
                 escapeCsv(meta.id || ''), escapeCsv(meta.nazwa || ''),
                 lat.toFixed(4), lon.toFixed(4), escapeCsv(paramKey),
-                (wartosc !== null && !isNaN(wartosc)) ? wartosc.toFixed(2) : '', escapeCsv(unit),
-                escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
+                valTxt, escapeCsv(unit), escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
                 escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso), escapeCsv(czas),
-                kierunek !== '' ? Number(kierunek).toFixed(0) : '',
-                escapeCsv(zrodlo), escapeCsv(typ)
+                dirTxt, escapeCsv(zrodlo), escapeCsv(typ)
             ]);
         }
         return rows;
@@ -88,9 +114,13 @@
 
     function triggerDownload(csvContent, filename) {
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob), link = document.createElement('a');
-        link.href = url; link.download = filename;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }
 
@@ -98,7 +128,7 @@
         const el = document.getElementById('export-meta-info');
         if (!el) return;
         const data = dataOverride || window.currentRenderedData;
-        if (!data || !data.pt_lats || !data.pt_lats.length) {
+        if (!data?.pt_lats?.length) {
             el.textContent = 'Brak danych do eksportu';
             el.style.color = 'var(--text-muted, #94a3b8)';
             return;
@@ -133,18 +163,15 @@
 
         try {
             const data = window.currentRenderedData || (window.getMapExportData ? (await window.getMapExportData(param))[param] : null);
-            if (!data || !data.pt_lats || !data.pt_lats.length) {
+            if (!data?.pt_lats?.length) {
                 showStatus(btn, 'Brak danych', true);
                 return;
             }
-
             const scope = resolveScope(data);
             const rows = buildRowsFromParam(param, data);
             const csv = [CSV_HEADER.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-            const filename = `bmapa_${param}_${scope.fileTag}.csv`;
-            
-            triggerDownload(csv, filename);
-            showStatus(btn, `${scope.typDanych === 'AKTUALNE' ? 'Pobrano aktualne' : 'Pobrano ' + scope.typDanych}`);
+            triggerDownload(csv, `bmapa_${param}_${scope.fileTag}.csv`);
+            showStatus(btn, scope.typDanych === 'AKTUALNE' ? 'Pobrano aktualne' : `Pobrano ${scope.typDanych}`);
             window.updateExportMetaBadge(data);
         } catch (err) {
             console.error('Błąd eksportu CSV:', err);
@@ -170,8 +197,7 @@
             const allRows = [];
             let latestScope = null;
             for (const paramKey of Object.keys(dataObj)) {
-                const paramRows = buildRowsFromParam(paramKey, dataObj[paramKey]);
-                allRows.push(...paramRows);
+                allRows.push(...buildRowsFromParam(paramKey, dataObj[paramKey]));
                 if (!latestScope) latestScope = resolveScope(dataObj[paramKey]);
             }
 
@@ -180,14 +206,12 @@
                 return;
             }
 
-            const scope = latestScope || resolveScope(null);
+            const tag = latestScope ? latestScope.fileTag : 'wszystkie';
             const csv = [CSV_HEADER.join(','), ...allRows.map(r => r.join(','))].join('\r\n');
-            const filename = `bmapa_wszystkie_${scope.fileTag}.csv`;
-            
-            triggerDownload(csv, filename);
+            triggerDownload(csv, `bmapa_pomiary_zbiorcze_${tag}.csv`);
             showStatus(btn, 'Pobrano wszystkie');
         } catch (err) {
-            console.error('Błąd eksportu CSV wszystkich parametrów:', err);
+            console.error('Błąd eksportu zbiorczego CSV:', err);
             showStatus(btn, 'Błąd eksportu', true);
         } finally {
             if (btn) btn.disabled = false;

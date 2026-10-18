@@ -92,107 +92,95 @@ export async function fetchIconModelData() {
     }
 }
 
+function appendPoint(dataObj, realCoords, z, pt, val, txt, hov, dir = null) {
+    if (val == null || isNaN(val)) return;
+    dataObj[z].pt_lats.push(pt.lat);
+    dataObj[z].pt_lons.push(pt.lon);
+    dataObj[z].pt_vals.push(val);
+    dataObj[z].pt_dirs.push(dir ?? null);
+    dataObj[z].pt_txts.push(txt);
+    dataObj[z].pt_hov.push(`<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${pt.name}</b><span style="font-size:0.65rem; color:${pt.badgeColor}; border:1px solid ${pt.badgeBorder}; border-radius:3px; padding:1px 4px;">${pt.source}</span></div>${hov}`);
+    dataObj[z].pt_foreign.push(pt.isForeign);
+    dataObj[z].pt_types.push(pt.type);
+    dataObj[z].pt_meta.push({ id: pt.id || '', nazwa: pt.name, zrodlo: pt.source, czas: pt.time || '' });
+    if (realCoords && realCoords[z]) {
+        realCoords[z].lats.push(pt.lat);
+        realCoords[z].lons.push(pt.lon);
+    }
+}
+
+function addAsosStationPoints(st, dataObj, realCoords, now) {
+    const lat = parseFloat(st.lat), lon = parseFloat(st.lon);
+    if (isNaN(lat) || isNaN(lon)) return;
+    const vStr = st.valid ? String(st.valid).trim() : '';
+    const vMs = vStr ? Date.parse(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z') : NaN;
+    if (!isNaN(vMs) && ((now - vMs) > 9000000 || (now - vMs) < -900000)) return;
+
+    const cc = (st.network || '').slice(0, 2);
+    const sName = `${st.name || st.station} [${cc}]`;
+    const timeStr = fmtPlTime(st.valid);
+    const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
+
+    const temp = st.tmpf != null ? Math.round(((st.tmpf - 32) * 5 / 9) * 10) / 10 : NaN;
+    const dp = st.dwpf != null ? Math.round(((st.dwpf - 32) * 5 / 9) * 10) / 10 : NaN;
+    const rh = st.relh != null ? Math.round(st.relh) : NaN;
+    const pMsl = st.alti != null ? Math.round(st.alti * 33.8639 * 10) / 10 : NaN;
+    const wSpd = st.sknt != null ? Math.round(st.sknt * 1.852) : NaN;
+    const wGust = st.gust != null ? Math.round(st.gust * 1.852) : (!isNaN(wSpd) ? wSpd : NaN);
+    const wDir = st.drct != null ? st.drct : null;
+    const lcl = (!isNaN(temp) && !isNaN(dp)) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
+
+    const pt = { lat, lon, name: sName, source: 'ASOS', isForeign: true, type: 'ODCZYT', id: st.station || '', time: st.valid || '', badgeColor: '#10b981', badgeBorder: 'rgba(16,185,129,0.3)' };
+
+    appendPoint(dataObj, realCoords, 'temp', pt, temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
+    appendPoint(dataObj, realCoords, 'cisnienie', pt, pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
+    appendPoint(dataObj, realCoords, 'wilg', pt, rh, rh.toFixed(0) + '%', `RH: <b>${rh.toFixed(0)}%</b>${timeLabel}`);
+    appendPoint(dataObj, realCoords, 'rosy', pt, dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
+    appendPoint(dataObj, realCoords, 'lcl', pt, lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
+    appendPoint(dataObj, realCoords, 'wiatr', pt, wGust, wGust.toFixed(0), `Maks. Wiatr: <b>${wGust.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+    appendPoint(dataObj, realCoords, 'wiatr_sr', pt, wSpd, wSpd.toFixed(0), `Śr. Wiatr: <b>${wSpd.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+}
+
 export function parseASOSData(asosData, dataObj, realCoords) {
     if (!Array.isArray(asosData) || !asosData.length) return;
     const now = Date.now();
     for (const st of asosData) {
-        const lat = parseFloat(st.lat);
-        const lon = parseFloat(st.lon);
-        if (isNaN(lat) || isNaN(lon)) continue;
-
-        const vStr = st.valid ? String(st.valid).trim() : '';
-        const vMs = vStr ? Date.parse(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z') : NaN;
-        if (!isNaN(vMs) && ((now - vMs) > 9000000 || (now - vMs) < -900000)) continue;
-
-        const cc = (st.network || '').slice(0, 2);
-        const sName = `${st.name || st.station} [${cc}]`;
-        const timeStr = fmtPlTime(st.valid);
-        const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
-
-        const temp = st.tmpf != null ? Math.round(((st.tmpf - 32) * 5 / 9) * 10) / 10 : NaN;
-        const dp = st.dwpf != null ? Math.round(((st.dwpf - 32) * 5 / 9) * 10) / 10 : NaN;
-        const rh = st.relh != null ? Math.round(st.relh) : NaN;
-        const pMsl = st.alti != null ? Math.round(st.alti * 33.8639 * 10) / 10 : NaN;
-        const wSpd = st.sknt != null ? Math.round(st.sknt * 1.852) : NaN;
-        const wGust = st.gust != null ? Math.round(st.gust * 1.852) : (!isNaN(wSpd) ? wSpd : NaN);
-        const wDir = st.drct != null ? st.drct : null;
-        const lcl = (!isNaN(temp) && !isNaN(dp)) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
-
-        const addPt = (z, val, txt, hov, dir) => {
-            if (isNaN(val) || val === null) return;
-            dataObj[z].pt_lats.push(lat);
-            dataObj[z].pt_lons.push(lon);
-            dataObj[z].pt_vals.push(val);
-            dataObj[z].pt_dirs.push(dir ?? null);
-            dataObj[z].pt_txts.push(txt);
-            dataObj[z].pt_hov.push(`<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${sName}</b><span style="font-size:0.65rem; color:#10b981; border:1px solid rgba(16,185,129,0.3); border-radius:3px; padding:1px 4px;">ASOS</span></div>${hov}`);
-            dataObj[z].pt_foreign.push(true);
-            dataObj[z].pt_types.push('ODCZYT');
-            dataObj[z].pt_meta.push({ id: st.station || '', nazwa: sName, zrodlo: 'ASOS', czas: st.valid || '' });
-            realCoords[z].lats.push(lat);
-            realCoords[z].lons.push(lon);
-        };
-
-        if (!isNaN(temp)) addPt('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
-        if (!isNaN(pMsl)) addPt('cisnienie', pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-        if (!isNaN(rh)) addPt('wilg', rh, rh.toFixed(0) + '%', `RH: <b>${rh.toFixed(0)}%</b>${timeLabel}`);
-        if (!isNaN(dp)) addPt('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
-        if (!isNaN(lcl)) addPt('lcl', lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
-        if (!isNaN(wGust)) addPt('wiatr', wGust, wGust.toFixed(0), `Maks. Wiatr: <b>${wGust.toFixed(0)} km/h</b>${timeLabel}`, wDir);
-        if (!isNaN(wSpd)) addPt('wiatr_sr', wSpd, wSpd.toFixed(0), `Śr. Wiatr: <b>${wSpd.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+        addAsosStationPoints(st, dataObj, realCoords, now);
     }
+}
+
+function addIconPoint(item, dataObj, realCoords, isHybrid, isForeign) {
+    const cur = item.current;
+    if (!cur) return;
+    const lat = item.latitude, lon = item.longitude;
+    const sName = isForeign ? `Prognoza ICON [${lat.toFixed(1)}, ${lon.toFixed(1)}]` : `ICON [${lat.toFixed(1)}, ${lon.toFixed(1)}]`;
+    const temp = cur.temperature_2m, dp = cur.dew_point_2m, rh = cur.relative_humidity_2m;
+    const pMsl = cur.pressure_msl, wSpd = cur.wind_speed_10m, wGust = cur.wind_gusts_10m, wDir = cur.wind_direction_10m;
+    const tSoil = cur.soil_temperature_6cm;
+    const lcl = (temp != null && dp != null) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
+    const timeStr = fmtPlTime(cur.time);
+    const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
+
+    const pt = { lat, lon, name: sName, source: 'ICON', isForeign, type: 'PROGNOZA', id: '', time: cur.time || '', badgeColor: '#60a5fa', badgeBorder: 'rgba(96,165,250,0.3)' };
+    const canAdd = z => !isHybrid || !realCoords?.[z]?.lats?.length || getMinDistKm(lat, lon, realCoords[z].lats, realCoords[z].lons) >= 22.0;
+
+    if (temp != null && canAdd('temp')) appendPoint(dataObj, null, 'temp', pt, temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
+    if (pMsl != null && canAdd('cisnienie')) appendPoint(dataObj, null, 'cisnienie', pt, pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
+    if (rh != null && canAdd('wilg')) appendPoint(dataObj, null, 'wilg', pt, rh, Math.round(rh) + '%', `RH: <b>${Math.round(rh)}%</b>${timeLabel}`);
+    if (dp != null && canAdd('rosy')) appendPoint(dataObj, null, 'rosy', pt, dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
+    if (!isNaN(lcl) && canAdd('lcl')) appendPoint(dataObj, null, 'lcl', pt, lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
+    if (wGust != null && canAdd('wiatr')) appendPoint(dataObj, null, 'wiatr', pt, wGust, Math.round(wGust).toString(), `Maks. Wiatr: <b>${Math.round(wGust)} km/h</b>${timeLabel}`, wDir);
+    if (wSpd != null && canAdd('wiatr_sr')) appendPoint(dataObj, null, 'wiatr_sr', pt, wSpd, Math.round(wSpd).toString(), `Śr. Wiatr: <b>${Math.round(wSpd)} km/h</b>${timeLabel}`, wDir);
+    if (tSoil != null && canAdd('grunt')) appendPoint(dataObj, null, 'grunt', pt, tSoil, tSoil.toFixed(1) + '°', `T grunt (6cm): <b>${tSoil.toFixed(1)}°C</b>${timeLabel}`);
 }
 
 export function parseModelData(modelData, dataObj, realCoords, isHybrid) {
     if (!modelData) return;
-    const processList = (list, isForeign) => {
-        if (!Array.isArray(list)) return;
-        for (const item of list) {
-            const cur = item.current;
-            if (!cur) continue;
-            const lat = item.latitude;
-            const lon = item.longitude;
-            const sName = isForeign ? `Prognoza ICON [${lat.toFixed(1)}, ${lon.toFixed(1)}]` : `ICON [${lat.toFixed(1)}, ${lon.toFixed(1)}]`;
-
-            const temp = cur.temperature_2m;
-            const dp = cur.dew_point_2m;
-            const rh = cur.relative_humidity_2m;
-            const pMsl = cur.pressure_msl;
-            const wSpd = cur.wind_speed_10m;
-            const wGust = cur.wind_gusts_10m;
-            const wDir = cur.wind_direction_10m;
-            const tSoil = cur.soil_temperature_6cm;
-            const lcl = (temp != null && dp != null) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
-            const timeStr = fmtPlTime(cur.time);
-            const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
-
-            const addPt = (z, val, txt, hov, dir) => {
-                if (val == null || isNaN(val)) return;
-                if (isHybrid && realCoords[z].lats.length > 0) {
-                    const d = getMinDistKm(lat, lon, realCoords[z].lats, realCoords[z].lons);
-                    if (d < 22.0) return;
-                }
-                dataObj[z].pt_lats.push(lat);
-                dataObj[z].pt_lons.push(lon);
-                dataObj[z].pt_vals.push(val);
-                dataObj[z].pt_dirs.push(dir ?? null);
-                dataObj[z].pt_txts.push(txt);
-                dataObj[z].pt_hov.push(`<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${sName}</b><span style="font-size:0.65rem; color:#60a5fa; border:1px solid rgba(96,165,250,0.3); border-radius:3px; padding:1px 4px;">ICON</span></div>${hov}`);
-                dataObj[z].pt_foreign.push(isForeign);
-                dataObj[z].pt_types.push('PROGNOZA');
-                dataObj[z].pt_meta.push({ id: '', nazwa: sName, zrodlo: 'ICON', czas: cur.time || '' });
-            };
-
-            if (temp != null) addPt('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
-            if (pMsl != null) addPt('cisnienie', pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-            if (rh != null) addPt('wilg', rh, Math.round(rh) + '%', `RH: <b>${Math.round(rh)}%</b>${timeLabel}`);
-            if (dp != null) addPt('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
-            if (!isNaN(lcl)) addPt('lcl', lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
-            if (wGust != null) addPt('wiatr', wGust, Math.round(wGust).toString(), `Maks. Wiatr: <b>${Math.round(wGust)} km/h</b>${timeLabel}`, wDir);
-            if (wSpd != null) addPt('wiatr_sr', wSpd, Math.round(wSpd).toString(), `Śr. Wiatr: <b>${Math.round(wSpd)} km/h</b>${timeLabel}`, wDir);
-            if (tSoil != null) addPt('grunt', tSoil, tSoil.toFixed(1) + '°', `T grunt (6cm): <b>${tSoil.toFixed(1)}°C</b>${timeLabel}`);
-        }
-    };
-    processList(modelData.pl, false);
-    processList(modelData.foreign, true);
+    if (Array.isArray(modelData.pl)) {
+        for (const item of modelData.pl) addIconPoint(item, dataObj, realCoords, isHybrid, false);
+    }
+    if (Array.isArray(modelData.foreign)) {
+        for (const item of modelData.foreign) addIconPoint(item, dataObj, realCoords, isHybrid, true);
+    }
 }
+

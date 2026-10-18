@@ -145,7 +145,7 @@ export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, s
     offCtx.drawImage(heatCanvas, 0, 0, w, h);
 
     if (drawIso) {
-        drawIsolines(offCtx, valGrid, gw, gh, w, h, cmin, cmax, stepVal, unit);
+        drawIsolines(offCtx, valGrid, { gw, gh, w, h }, { cmin, cmax, stepVal, unit });
     }
 
     if (!clipToPoland) return offCanvas.toDataURL();

@@ -48,53 +48,90 @@ function syncSatelliteTime(timeUnixSec) {
     if (activeSatMode === 'night' && satelliteNightLayer) satelliteNightLayer.setParams({ time: timeStr });
 }
 
+function renderImgwFrame(map, frame, opacity) {
+    if (!imgwRadarOverlay) {
+        imgwRadarOverlay = L.imageOverlay(frame.url, IMGW_RADAR_BOUNDS, { opacity, pane: 'radarPane' });
+    } else {
+        imgwRadarOverlay.setUrl(frame.url);
+        imgwRadarOverlay.setOpacity(opacity);
+    }
+    if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(imgwRadarOverlay)) imgwRadarOverlay.addTo(map);
+}
+
+function renderRvFrame(map, frame, opacity) {
+    const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+    if (!radarTileLayer) {
+        radarTileLayer = L.tileLayer(tileUrl, { opacity, pane: 'radarPane', maxZoom: 18, maxNativeZoom: 8 });
+    } else {
+        radarTileLayer.setUrl(tileUrl);
+        radarTileLayer.setOpacity(opacity);
+    }
+    if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(radarTileLayer)) radarTileLayer.addTo(map);
+}
+
 export function showRadarFrame(map, index) {
     currentFrame = parseInt(index);
     const timeEl = document.getElementById('rv-time');
     const opacity = (window.MAP_LAYERS?.radar?.opacity ?? 68) / 100.0;
 
     if (activeRadarSource === 'imgw') {
-        if (!imgwFrames[currentFrame]) return;
         const frame = imgwFrames[currentFrame];
-        if (!imgwRadarOverlay) {
-            imgwRadarOverlay = L.imageOverlay(frame.url, IMGW_RADAR_BOUNDS, { opacity, pane: 'radarPane' });
-        } else {
-            imgwRadarOverlay.setUrl(frame.url);
-            imgwRadarOverlay.setOpacity(opacity);
-        }
-        if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(imgwRadarOverlay)) imgwRadarOverlay.addTo(map);
+        if (!frame) return;
+        renderImgwFrame(map, frame, opacity);
         if (timeEl) timeEl.textContent = frame.label;
         syncSatelliteTime(frame.time);
     } else {
-        if (!radarFrames[currentFrame]) return;
         const frame = radarFrames[currentFrame];
-        const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
-        if (!radarTileLayer) {
-            radarTileLayer = L.tileLayer(tileUrl, { opacity, pane: 'radarPane', maxZoom: 18, maxNativeZoom: 8 });
-        } else {
-            radarTileLayer.setUrl(tileUrl);
-            radarTileLayer.setOpacity(opacity);
-        }
-        if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(radarTileLayer)) radarTileLayer.addTo(map);
+        if (!frame) return;
+        renderRvFrame(map, frame, opacity);
         if (timeEl) timeEl.textContent = fmtPlTime(frame.time * 1000);
         syncSatelliteTime(frame.time);
     }
 }
 
-export function initRadar(map) {
-    imgwFrames = generateImgwRadarFrames();
-
+function createSatelliteLayers(map) {
     satelliteDayLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', {
         layers: 'msg_fes:rgb_eview', format: 'image/png', transparent: true,
         opacity: 0.68, pane: 'satellitePane', maxNativeZoom: 7, maxZoom: 18, attribution: 'EUMETSAT HRV'
     });
-
     map.createPane('satelliteNightPane');
     map.getPane('satelliteNightPane').style.zIndex = 250;
     satelliteNightLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', {
         layers: 'mtg_fd:ir105_hrfi', format: 'image/png', transparent: true,
         opacity: 0.52, pane: 'satelliteNightPane', maxNativeZoom: 7, maxZoom: 18, attribution: 'EUMETSAT MTG-IR'
     });
+}
+
+function setupRadarControls(map) {
+    const rvSlider = document.getElementById('rv-slider');
+    if (rvSlider) rvSlider.addEventListener('input', e => showRadarFrame(map, parseInt(e.target.value)));
+
+    const rvPlayBtn = document.getElementById('rv-play-btn');
+    if (!rvPlayBtn) return;
+    rvPlayBtn.addEventListener('click', e => {
+        const btn = e.currentTarget;
+        if (animationTimer) {
+            clearInterval(animationTimer);
+            animationTimer = null;
+            btn.innerHTML = '<i data-lucide="play"></i>';
+        } else {
+            btn.innerHTML = '<i data-lucide="pause"></i>';
+            const max = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
+            if (currentFrame >= max - 1) currentFrame = 0;
+            animationTimer = setInterval(() => {
+                const count = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
+                currentFrame = currentFrame >= count - 1 ? 0 : currentFrame + 1;
+                if (rvSlider) rvSlider.value = currentFrame;
+                showRadarFrame(map, currentFrame);
+            }, 500);
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+}
+
+export function initRadar(map) {
+    imgwFrames = generateImgwRadarFrames();
+    createSatelliteLayers(map);
 
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(res => res.json())
@@ -118,15 +155,11 @@ export function initRadar(map) {
 
     window.setSatelliteMode = (mode) => {
         activeSatMode = mode;
-        const isVisible = window.MAP_LAYERS?.satellite?.visible;
-        if (isVisible) {
-            if (mode === 'day') {
-                if (map.hasLayer(satelliteNightLayer)) map.removeLayer(satelliteNightLayer);
-                if (!map.hasLayer(satelliteDayLayer)) map.addLayer(satelliteDayLayer);
-            } else {
-                if (map.hasLayer(satelliteDayLayer)) map.removeLayer(satelliteDayLayer);
-                if (!map.hasLayer(satelliteNightLayer)) map.addLayer(satelliteNightLayer);
-            }
+        if (window.MAP_LAYERS?.satellite?.visible) {
+            const toRemove = mode === 'day' ? satelliteNightLayer : satelliteDayLayer;
+            const toAdd = mode === 'day' ? satelliteDayLayer : satelliteNightLayer;
+            if (map.hasLayer(toRemove)) map.removeLayer(toRemove);
+            if (!map.hasLayer(toAdd)) map.addLayer(toAdd);
         }
         if (typeof window.renderLayerManagerUI === 'function') window.renderLayerManagerUI();
     };
@@ -141,8 +174,8 @@ export function initRadar(map) {
         if (src === 'imgw') {
             if (radarTileLayer && map.hasLayer(radarTileLayer)) map.removeLayer(radarTileLayer);
             imgwFrames = generateImgwRadarFrames();
-        } else {
-            if (imgwRadarOverlay && map.hasLayer(imgwRadarOverlay)) map.removeLayer(imgwRadarOverlay);
+        } else if (imgwRadarOverlay && map.hasLayer(imgwRadarOverlay)) {
+            map.removeLayer(imgwRadarOverlay);
         }
 
         const count = src === 'imgw' ? imgwFrames.length : radarFrames.length;
@@ -155,33 +188,7 @@ export function initRadar(map) {
         showRadarFrame(map, currentFrame);
         if (typeof window.renderLayerManagerUI === 'function') window.renderLayerManagerUI();
     };
-
-    const rvSlider = document.getElementById('rv-slider');
-    if (rvSlider) rvSlider.addEventListener('input', e => showRadarFrame(map, parseInt(e.target.value)));
-
-    const rvPlayBtn = document.getElementById('rv-play-btn');
-    if (rvPlayBtn) {
-        rvPlayBtn.addEventListener('click', e => {
-            const btn = e.currentTarget;
-            if (animationTimer) {
-                clearInterval(animationTimer);
-                animationTimer = null;
-                btn.innerHTML = '<i data-lucide="play"></i>';
-            } else {
-                btn.innerHTML = '<i data-lucide="pause"></i>';
-                const max = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
-                if (currentFrame >= max - 1) currentFrame = 0;
-                animationTimer = setInterval(() => {
-                    const count = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
-                    currentFrame = currentFrame >= count - 1 ? 0 : currentFrame + 1;
-                    if (rvSlider) rvSlider.value = currentFrame;
-                    showRadarFrame(map, currentFrame);
-                }, 500);
-            }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        });
-    }
-
+    setupRadarControls(map);
     return {
         satelliteDayLayer,
         satelliteNightLayer,
@@ -189,4 +196,3 @@ export function initRadar(map) {
         getRadarOverlay: () => (activeRadarSource === 'imgw' ? imgwRadarOverlay : radarTileLayer)
     };
 }
-

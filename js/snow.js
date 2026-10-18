@@ -50,21 +50,20 @@
 
         for (let i = 1; i < tokens.length; i++) {
             const t = tokens[i];
-            const hasDot = t.indexOf('.') !== -1;
-            const isSingleDigit = t.length === 1 && t >= '1' && t <= '9';
-            const isGatunekZapas = t.length >= 3 && t[0] >= '1' && t[0] <= '9' && !hasDot;
-
-            if (isSingleDigit && gatunek === null) {
+            const hasDot = t.includes('.');
+            if (/^[1-9]$/.test(t) && gatunek === null) {
                 gatunek = parseInt(t, 10);
-            } else if (isGatunekZapas && gatunek === null && zapas === null) {
+            } else if (/^[1-9]\d{2,}$/.test(t) && gatunek === null && zapas === null) {
                 gatunek = parseInt(t[0], 10);
                 zapas = parseFloat(t.substring(1)) || 0;
             } else if (hasDot && obciazenie === 0) {
-                if (gatunek === null && swiezy === null) swiezy = parseFloat(t) || 0;
-                else obciazenie = parseFloat(t) || 0;
+                const val = parseFloat(t) || 0;
+                if (gatunek === null && swiezy === null) swiezy = val;
+                else obciazenie = val;
             } else if (!hasDot && zapas === null) {
-                if (gatunek === null && swiezy === null) swiezy = parseFloat(t) || 0;
-                else zapas = parseFloat(t) || 0;
+                const val = parseFloat(t) || 0;
+                if (gatunek === null && swiezy === null) swiezy = val;
+                else zapas = val;
             }
         }
         return { grubosc, swiezy, gatunek, zapas, obciazenie };
