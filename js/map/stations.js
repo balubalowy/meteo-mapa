@@ -30,9 +30,26 @@ export function toIsoUtc(input) {
     return (isNaN(ms) || ms <= 0) ? '' : new Date(ms).toISOString().replace('.000Z', 'Z');
 }
 
-const fmtTime = s => {
-    const m = String(s || '').match(/(\d{2}:\d{2})/);
-    return m ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${m[1]})</span>` : '';
+export function fmtPlTime(input, showSec = false) {
+    if (!input) return '';
+    let ms = typeof input === 'number' ? input : NaN;
+    if (isNaN(ms)) {
+        const s = String(input).trim();
+        const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
+        ms = Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
+    }
+    if (isNaN(ms) || ms <= 0) return '';
+    const d = new Date(ms);
+    const opts = { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', ...(showSec ? { second: '2-digit' } : {}) };
+    const hm = d.toLocaleTimeString('pl-PL', opts);
+    const plH = parseInt(d.toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit' }), 10);
+    const diff = (plH - d.getUTCHours() + 24) % 24;
+    return `${hm} ${diff === 2 ? 'CEST' : 'CET'}`;
+}
+
+export const fmtTime = s => {
+    const pl = fmtPlTime(s);
+    return pl ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${pl})</span>` : '';
 };
 
 export async function getIMGWLiveData(targetParam = null) {

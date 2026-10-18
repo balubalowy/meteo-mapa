@@ -1,6 +1,8 @@
 // js/map/ui.js
 // Obsługa interfejsu użytkownika: panel boczny, pełny ekran i wskaźnik opóźnienia danych
 
+import { fmtPlTime } from './stations.js';
+
 export function updateDelayBadge(latestTimeMs, paramName) {
     const badge = document.getElementById('map-delay-badge');
     if (!badge) return;
@@ -23,7 +25,7 @@ export function updateDelayBadge(latestTimeMs, paramName) {
     badge.style.background = bg;
     badge.style.borderColor = border;
     badge.textContent = `${diffMin} min temu`;
-    badge.title = `Opóźnienie danych: ${paramName || 'obserwacja'}\nPomiar: ${new Date(latestTimeMs).toLocaleTimeString('pl-PL')}`;
+    badge.title = `Opóźnienie danych: ${paramName || 'obserwacja'}\nPomiar: ${fmtPlTime(latestTimeMs)}`;
 }
 
 export function initUIControls(map) {

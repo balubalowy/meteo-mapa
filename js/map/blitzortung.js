@@ -1,6 +1,8 @@
 // js/map/blitzortung.js
 // Odbiór i wizualizacja wyładowań atmosferycznych w czasie rzeczywistym z Blitzortung Live WebSocket
 
+import { fmtPlTime } from './stations.js';
+
 let activeStrikes = [];
 let boSocket = null;
 let boReconnectTimer = null;
@@ -78,7 +80,7 @@ function addStrikePoint(strike) {
     const st = getStrikeStyle(ageMin);
     const marker = L.circleMarker([strike.lat, strike.lon], { ...st, pane: 'lightningPane' });
 
-    const timeStr = new Date(strikeTime).toLocaleTimeString('pl-PL');
+    const timeStr = fmtPlTime(strikeTime, true);
     marker.bindTooltip(`Wyładowanie: ${timeStr}<br>Pozycja: ${strike.lat.toFixed(3)}°N, ${strike.lon.toFixed(3)}°E`, { sticky: true });
 
     marker.addTo(lightningLayerGroup);

@@ -16,7 +16,11 @@
     }
 
     function formatHm(dt) {
-        return dt.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        if (!dt) return '';
+        const hm = dt.toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' });
+        const plH = parseInt(dt.toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit' }), 10);
+        const diff = (plH - dt.getUTCHours() + 24) % 24;
+        return `${hm} ${diff === 2 ? 'CEST' : 'CET'}`;
     }
 
     function emptyResult() {

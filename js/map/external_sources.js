@@ -2,6 +2,7 @@
 // Obsługa zewnętrznych źródeł danych: stacje zagraniczne ASOS oraz model numeryczny DWD ICON
 
 import { PL_ICON_FILL_COORDS, FOREIGN_STATIONS } from './coords.js';
+import { fmtPlTime } from './stations.js';
 
 let foreignAsosCache = null;
 let foreignAsosCacheTime = 0;
@@ -105,7 +106,7 @@ export function parseASOSData(asosData, dataObj, realCoords) {
 
         const cc = (st.network || '').slice(0, 2);
         const sName = `${st.name || st.station} [${cc}]`;
-        const timeStr = st.local_valid ? st.local_valid.slice(11, 16) : (st.valid ? st.valid.slice(11, 16) : '');
+        const timeStr = fmtPlTime(st.valid);
         const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
 
         const temp = st.tmpf != null ? Math.round(((st.tmpf - 32) * 5 / 9) * 10) / 10 : NaN;
@@ -162,7 +163,7 @@ export function parseModelData(modelData, dataObj, realCoords, isHybrid) {
             const wDir = cur.wind_direction_10m;
             const tSoil = cur.soil_temperature_6cm;
             const lcl = (temp != null && dp != null) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
-            const timeStr = cur.time ? cur.time.slice(11, 16) : '';
+            const timeStr = fmtPlTime(cur.time);
             const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
 
             const addPt = (z, val, txt, hov, dir) => {

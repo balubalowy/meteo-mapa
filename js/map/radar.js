@@ -1,11 +1,7 @@
-// js/map/radar.js
-// Integracja radaru opadów (IMGW CMAX POLCOMP oraz RainViewer) i satelity EUMETSAT
+import { fmtPlTime } from './stations.js';
 
 export const IMGW_RADAR_SCALE = [
-    [0, [0, 0, 0, 0]], [3, [4, 5, 147, 20]], [8, [4, 5, 147, 100]], [10, [31, 72, 216, 180]], [12, [58, 126, 231, 230]], [14, [86, 181, 247, 255]], [16, [109, 201, 252, 255]], [17, [121, 211, 248, 255]], [20, [174, 233, 251, 255]],
-    [23, [231, 248, 255, 255]], [25, [253, 252, 224, 255]], [27, [253, 246, 158, 255]], [28, [254, 241, 136, 255]], [30, [249, 232, 90, 255]], [32, [245, 206, 77, 255]], [34, [239, 151, 54, 255]], [36, [233, 98, 43, 255]],
-    [37, [236, 73, 38, 255]], [40, [184, 37, 29, 255]], [43, [159, 30, 34, 255]], [44, [149, 29, 39, 255]], [46, [142, 28, 51, 255]], [47, [159, 31, 79, 255]], [50, [187, 42, 135, 255]], [53, [210, 55, 172, 255]],
-    [55, [219, 72, 189, 255]], [56, [221, 79, 197, 255]], [59, [203, 144, 198, 255]], [65, [180, 100, 180, 255]], [100, [0, 0, 0, 255]], [101, [0, 0, 0, 0]], [255, [0, 0, 0, 0]]
+    [0, [0, 0, 0, 0]], [3, [4, 5, 147, 20]], [8, [4, 5, 147, 100]], [10, [31, 72, 216, 180]], [12, [58, 126, 231, 230]], [14, [86, 181, 247, 255]], [16, [109, 201, 252, 255]], [17, [121, 211, 248, 255]], [20, [174, 233, 251, 255]], [23, [231, 248, 255, 255]], [25, [253, 252, 224, 255]], [27, [253, 246, 158, 255]], [28, [254, 241, 136, 255]], [30, [249, 232, 90, 255]], [32, [245, 206, 77, 255]], [34, [239, 151, 54, 255]], [36, [233, 98, 43, 255]], [37, [236, 73, 38, 255]], [40, [184, 37, 29, 255]], [43, [159, 30, 34, 255]], [44, [149, 29, 39, 255]], [46, [142, 28, 51, 255]], [47, [159, 31, 79, 255]], [50, [187, 42, 135, 255]], [53, [210, 55, 172, 255]], [55, [219, 72, 189, 255]], [56, [221, 79, 197, 255]], [59, [203, 144, 198, 255]], [65, [180, 100, 180, 255]], [100, [0, 0, 0, 255]], [101, [0, 0, 0, 0]], [255, [0, 0, 0, 0]]
 ];
 
 const IMGW_RADAR_BOUNDS = [[48.2985, 12.4411], [56.3277, 25.6641]];
@@ -31,7 +27,7 @@ function generateImgwRadarFrames() {
         const d = new Date(now.getTime() - (i * 5 + 3) * 60000);
         const pad = n => String(n).padStart(2, '0');
         const ts = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(Math.floor(d.getUTCMinutes() / 5) * 5)}`;
-        const label = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const label = fmtPlTime(d);
         const url = `https://danepubliczne.imgw.pl/pl/datastore/getfiledown/Oper/Polrad/Produkty/POLCOMP/COMPO_CMAX_250.comp.cmax/${ts}0000dBZ.cmax_echoOnly.png`;
         if (!frames.some(f => f.ts === ts)) {
             frames.push({ ts, url, time: Math.floor(d.getTime() / 1000), label });
@@ -80,7 +76,7 @@ export function showRadarFrame(map, index) {
             radarTileLayer.setOpacity(opacity);
         }
         if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(radarTileLayer)) radarTileLayer.addTo(map);
-        if (timeEl) timeEl.textContent = new Date(frame.time * 1000).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        if (timeEl) timeEl.textContent = fmtPlTime(frame.time * 1000);
         syncSatelliteTime(frame.time);
     }
 }
