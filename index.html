@@ -29,9 +29,18 @@
                 <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
                 <span id="map-delay-badge" style="display: inline-flex; align-items: center; font-size: 0.72rem; padding: 2px 7px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-secondary); font-weight: 600;" title="Oczekiwanie na dane...">-- min</span>
             </div>
-            <button class="btn btn-ghost mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 8px;" title="Zamknij panel" aria-label="Zamknij panel">
-                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-            </button>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button id="auth-login-btn" class="btn btn-ghost" style="padding: 3px 8px; font-size: 0.72rem; border: 1px solid var(--border-subtle); border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="Zaloguj (Google) aby odblokować bazę RTDB i trendy">
+                    <i data-lucide="log-in" style="width: 13px; height: 13px;"></i> Zaloguj
+                </button>
+                <div id="auth-user-badge" style="display: none; align-items: center; gap: 4px;">
+                    <span id="auth-user-email" style="font-size: 0.7rem; color: var(--accent-primary); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    <button id="auth-logout-btn" class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.7rem;" title="Wyloguj"><i data-lucide="log-out" style="width: 13px; height: 13px;"></i></button>
+                </div>
+                <button class="btn btn-ghost mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 8px;" title="Zamknij panel" aria-label="Zamknij panel">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
         </div>
 
         <!-- SEKCJA: Radar -->
@@ -101,15 +110,18 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 3px; display: block;">Horyzont:</label>
-                    <select id="imgw-okres" class="form-select" aria-label="Horyzont czasowy obserwacji IMGW" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Horyzont:</label>
+                        <span id="rtdb-status-badge" style="font-size: 0.7rem; color: var(--text-muted);" title="Dostęp do bazy danych IMGW z historią wymaga logowania">Tylko dla zalogowanych</span>
+                    </div>
+                    <select id="imgw-okres" class="form-select" aria-label="Horyzont czasowy obserwacji IMGW" onchange="window.renderIMGW && window.renderIMGW()" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
                         <option value="now" selected>Teraz</option>
-                        <option value="trend1h" disabled title="Wymaga bazy danych">Trend 1h</option>
-                        <option value="trend2h" disabled title="Wymaga bazy danych">Trend 2h</option>
-                        <option value="trend3h" disabled title="Wymaga bazy danych">Trend 3h</option>
-                        <option value="trend5h" disabled title="Wymaga bazy danych">Trend 5h</option>
-                        <option value="max5" disabled title="Wymaga bazy danych">Maks. 5h</option>
-                        <option value="min5" disabled title="Wymaga bazy danych">Min. 5h</option>
+                        <option value="trend1h" disabled title="Wymaga logowania kontem Google">Trend 1h</option>
+                        <option value="trend2h" disabled title="Wymaga logowania kontem Google">Trend 2h</option>
+                        <option value="trend3h" disabled title="Wymaga logowania kontem Google">Trend 3h</option>
+                        <option value="trend5h" disabled title="Wymaga logowania kontem Google">Trend 5h</option>
+                        <option value="max5" disabled title="Wymaga logowania kontem Google">Maks. 5h</option>
+                        <option value="min5" disabled title="Wymaga logowania kontem Google">Min. 5h</option>
                     </select>
                 </div>
                 
@@ -304,13 +316,19 @@
   <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   
+  <!-- Moduł autoryzacji Firebase Google (wymagany do RTDB) -->
+  <script type="module" src="js/auth.js"></script>
+
   <!-- Moduł pokrywy śnieżnej IMGW -->
   <script src="js/snow.js"></script>
+
+  <!-- Moduł historii i trendów IMGW z Firebase RTDB -->
+  <script src="js/history.js"></script>
 
   <!-- Moduł eksportu danych CSV -->
   <script src="js/export.js"></script>
 
   <!-- Core Standalone Map Engine -->
-  <script src="js/mapa.js"></script>
+  <script type="module" src="js/mapa.js"></script>
 </body>
 </html>
