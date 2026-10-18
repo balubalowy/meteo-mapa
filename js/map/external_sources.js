@@ -25,10 +25,12 @@ export function getMinDistKm(lat, lon, stationLats, stationLons) {
     return minDist;
 }
 
+const inRange = (v, min, max) => v >= min && v <= max;
+
 function isTargetAsosStation(d) {
     const lat = parseFloat(d.lat), lon = parseFloat(d.lon);
     if (isNaN(lat) || isNaN(lon) || (d.station || '').startsWith('EP')) return false;
-    return lat >= 48.0 && lat <= 56.5 && lon >= 11.5 && lon <= 26.5;
+    return inRange(lat, 48.0, 56.5) && inRange(lon, 11.5, 26.5);
 }
 
 export async function fetchForeignASOSData() {
@@ -105,9 +107,7 @@ function isValidAsosTimestamp(validStr, now) {
     const vStr = String(validStr).trim();
     const iso = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z';
     const vMs = Date.parse(iso);
-    if (isNaN(vMs)) return true;
-    const diff = now - vMs;
-    return diff <= 9000000 && diff >= -900000;
+    return isNaN(vMs) || inRange(now - vMs, -900000, 9000000);
 }
 
 function calculateAsosMetrics(st) {
@@ -151,11 +151,11 @@ export function parseASOSData(asosData, dataObj, realCoords) {
     for (const st of asosData) addAsosStationPoints(st, ctx, now);
 }
 
-function canAddIconPoint(ctx, z, isHybrid, lat, lon) {
+function canAddIconPoint(ctx, z, isHybrid, pt) {
     if (!isHybrid) return true;
     const coords = ctx.realCoords?.[z];
     if (!coords?.lats?.length) return true;
-    return getMinDistKm(lat, lon, coords.lats, coords.lons) >= 22.0;
+    return getMinDistKm(pt.lat, pt.lon, coords.lats, coords.lons) >= 22.0;
 }
 
 function addIconPoint(item, ctx, isHybrid, isForeign) {
@@ -184,7 +184,7 @@ function addIconPoint(item, ctx, isHybrid, isForeign) {
     ];
 
     for (const m of metrics) {
-        if (canAddIconPoint(ctx, m.z, isHybrid, lat, lon)) appendPoint(ctx, m.z, pt, m);
+        if (canAddIconPoint(ctx, m.z, isHybrid, pt)) appendPoint(ctx, m.z, pt, m);
     }
 }
 

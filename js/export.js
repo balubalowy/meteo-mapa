@@ -3,10 +3,9 @@
 
 (function() {
     const PARAM_UNITS = {
-        'temp': 'degC', 'grunt': 'degC', 'rosy': 'degC', 'wilg': '%',
-        'lcl': 'm', 'wiatr_sr': 'km/h', 'wiatr': 'km/h', 'cisnienie': 'hPa',
-        'snieg': 'cm', 'snieg_swiezy': 'cm', 'snieg_zapas': 'mm',
-        'snieg_obciazenie': 'kN/m2', 'snieg_norma': '%'
+        temp: 'degC', grunt: 'degC', rosy: 'degC', wilg: '%', lcl: 'm',
+        wiatr_sr: 'km/h', wiatr: 'km/h', cisnienie: 'hPa', snieg: 'cm',
+        snieg_swiezy: 'cm', snieg_zapas: 'mm', snieg_obciazenie: 'kN/m2', snieg_norma: '%'
     };
 
     const pad = n => String(n).padStart(2, '0');
@@ -38,30 +37,21 @@
 
     function formatScopeDescriptions(typDanych, horyzont, dtOd, dtDo) {
         const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const timeDoLocal = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-        const timeOdLocal = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const timeDo = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const timeOd = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
         const ymd = formatYmdUtc(dtDo);
         const hmDo = `${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}`;
         const hmOd = `${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}`;
 
         if (typDanych === 'AKTUALNE') {
-            return {
-                opis: `Aktualne: ${dataStr}, ${timeDoLocal} (${formatHmUtc(dtDo)} UTC)`,
-                fileTag: `aktualne_${ymd}T${hmDo}Z`
-            };
+            return { opis: `Aktualne: ${dataStr}, ${timeDo} (${formatHmUtc(dtDo)} UTC)`, fileTag: `aktualne_${ymd}T${hmDo}Z` };
         }
         if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
             const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
             const tag = typDanych === 'MINIMUM' ? 'min5h' : 'max5h';
-            return {
-                opis: `${lbl} (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`,
-                fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z`
-            };
+            return { opis: `${lbl} (5h): ${dataStr}, ${timeOd}–${timeDo} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
         }
-        return {
-            opis: `Trend (${horyzont}): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`,
-            fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z`
-        };
+        return { opis: `Trend (${horyzont}): ${dataStr}, ${timeOd}–${timeDo} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`, fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z` };
     }
 
     function resolveScope(pData) {
@@ -88,25 +78,18 @@
 
         for (let i = 0; i < pData.pt_lats.length; i++) {
             const meta = pData.pt_meta?.[i] || {};
-            const isModel = pData.pt_types?.[i] === 'PROGNOZA';
-            const isForeign = Boolean(pData.pt_foreign?.[i]);
+            const isModel = pData.pt_types?.[i] === 'PROGNOZA', isForeign = Boolean(pData.pt_foreign?.[i]);
             const typ = isModel ? 'MODEL' : (meta.typ || 'ODCZYT');
             const zrodlo = resolvePointSource(meta, isModel, isForeign);
-
-            const lat = pData.pt_lats[i];
-            const lon = pData.pt_lons[i];
-            const val = pData.pt_vals[i];
-            const dir = pData.pt_dirs?.[i];
+            const val = pData.pt_vals[i], dir = pData.pt_dirs?.[i];
             const dirTxt = (dir !== null && dir !== undefined && !isNaN(dir)) ? Number(dir).toFixed(0) : '';
             const valTxt = (val !== null && val !== undefined && !isNaN(val)) ? val.toFixed(2) : '';
             const czas = meta.czas || (pData.latestTimeMs ? toUtcIso(new Date(pData.latestTimeMs)) : scope.czasDoIso);
 
             rows.push([
-                escapeCsv(meta.id || ''), escapeCsv(meta.nazwa || ''),
-                lat.toFixed(4), lon.toFixed(4), escapeCsv(paramKey),
-                valTxt, escapeCsv(unit), escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
-                escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso), escapeCsv(czas),
-                dirTxt, escapeCsv(zrodlo), escapeCsv(typ)
+                escapeCsv(meta.id || ''), escapeCsv(meta.nazwa || ''), pData.pt_lats[i].toFixed(4), pData.pt_lons[i].toFixed(4),
+                escapeCsv(paramKey), valTxt, escapeCsv(unit), escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
+                escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso), escapeCsv(czas), dirTxt, escapeCsv(zrodlo), escapeCsv(typ)
             ]);
         }
         return rows;
@@ -114,14 +97,10 @@
 
     function triggerDownload(csvContent, filename) {
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = filename;
+        document.body.appendChild(link); link.click();
+        document.body.removeChild(link); URL.revokeObjectURL(url);
     }
 
     window.updateExportMetaBadge = function(dataOverride) {
@@ -141,13 +120,9 @@
     function showStatus(btn, text, isError = false) {
         if (!btn) return;
         const prevText = btn.dataset.prevText || btn.textContent;
-        btn.dataset.prevText = prevText;
-        btn.textContent = text;
+        btn.dataset.prevText = prevText; btn.textContent = text;
         if (isError) btn.style.borderColor = 'var(--accent-danger, #ef4444)';
-        setTimeout(() => {
-            btn.textContent = prevText;
-            btn.style.borderColor = '';
-        }, 3500);
+        setTimeout(() => { btn.textContent = prevText; btn.style.borderColor = ''; }, 3500);
     }
 
     const CSV_HEADER = [

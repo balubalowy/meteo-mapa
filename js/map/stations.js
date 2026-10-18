@@ -20,12 +20,14 @@ function initDataBuffers() {
     return { dataObj, realCoords };
 }
 
+const inRange = (v, min, max) => v >= min && v <= max;
+
 function pushStationPoint(ctx, z, pt, metric) {
     const { val, txt, hov, dir, time } = metric;
     if (val == null || isNaN(val)) return;
     const tIso = toIsoUtc(time);
     const tMs = tIso ? Date.parse(tIso) : NaN;
-    if (isNaN(tMs) || (ctx.now - tMs) > 9000000 || (ctx.now - tMs) < -900000) return;
+    if (isNaN(tMs) || !inRange(ctx.now - tMs, -900000, 9000000)) return;
     if (tMs > ctx.dataObj[z].latestTimeMs) ctx.dataObj[z].latestTimeMs = tMs;
 
     ctx.dataObj[z].pt_lats.push(pt.lat);
@@ -46,7 +48,7 @@ function parseSynopPoints(synopData, ctx) {
     synopData.forEach(st => {
         const pVal = parseFloat(st.cisnienie);
         const coord = SYNOP_STATIONS_COORDS[st.id_stacji];
-        if (isNaN(pVal) || !pVal || !coord) return;
+        if (!pVal || !coord) return;
         const sName = coord.name || st.stacja;
         const timeStr = `${String(st.godzina_pomiaru).padStart(2, '0')}:00`;
         const sIso = toIsoUtc(`${st.data_pomiaru} ${timeStr}:00`);
@@ -126,6 +128,12 @@ function appendSnowData(snowData, dataObj) {
     });
 }
 
+function isCacheFresh(cached, now, isSnow, targetParam) {
+    if (!cached || (now - cached.time >= 60000)) return false;
+    if (isSnow && (!cached.data?.[targetParam]?.pt_lats?.length)) return false;
+    return true;
+}
+
 export async function getIMGWLiveData(targetParam = null) {
     const chkModel = document.getElementById('chk-source-model');
     const isRR = document.getElementById('provider-rr')?.checked ?? false;
@@ -135,9 +143,7 @@ export async function getIMGWLiveData(targetParam = null) {
 
     const cached = imgwLiveCacheByMode[cacheKey];
     const isSnow = targetParam === 'snieg' || targetParam === 'snieg_swiezy';
-    const snowMiss = isSnow && cached?.data && (!cached.data[targetParam] || !cached.data[targetParam].pt_lats.length);
-
-    if (cached && (now - cached.time < 60000) && !snowMiss) return cached.data;
+    if (isCacheFresh(cached, now, isSnow, targetParam)) return cached.data;
 
     const loadingEl = document.getElementById('imgw-loading');
     if (loadingEl) {
