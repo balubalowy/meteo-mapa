@@ -25,15 +25,10 @@
 
     function getStationVal(st, zmienna) {
         if (!st) return null;
-        if (zmienna === 'temp') return st.temp ?? st.temperatura ?? null;
-        if (zmienna === 'grunt') return st.temp_grunt ?? st.temperatura_gruntu ?? null;
-        if (zmienna === 'wilg') return st.wilg ?? st.wilgotnosc ?? null;
-        if (zmienna === 'wiatr') return st.wiatr_max ?? st.maks_poryw_kmh ?? null;
-        if (zmienna === 'wiatr_sr') return st.wiatr_sr ?? st.wiatr_sr_kmh ?? null;
-        if (zmienna === 'cisnienie') return st.cisnienie ?? null;
+        const map = { temp: st.temp ?? st.temperatura, grunt: st.temp_grunt ?? st.temperatura_gruntu, wilg: st.wilg ?? st.wilgotnosc, wiatr: st.wiatr_max ?? st.maks_poryw_kmh, wiatr_sr: st.wiatr_sr ?? st.wiatr_sr_kmh, cisnienie: st.cisnienie };
+        if (zmienna in map) return map[zmienna] ?? null;
         if (zmienna === 'rosy') {
-            const t = st.temp ?? st.temperatura;
-            const rh = st.wilg ?? st.wilgotnosc;
+            const t = st.temp ?? st.temperatura, rh = st.wilg ?? st.wilgotnosc;
             return (t !== null && rh !== null) ? window.BMapaApi.calculateDewPoint(t, rh) : null;
         }
         return null;
@@ -42,30 +37,22 @@
     async function fetchFirebaseHistory() {
         const now = Date.now();
         if (historyCache && (now - historyCacheTime < CACHE_TTL_MS)) return historyCache;
-
         const token = window.getFirebaseToken ? await window.getFirebaseToken() : null;
-        const authParam = token ? `?auth=${token}` : '';
-        const res = await fetch(`${RTDB_HISTORY_URL}${authParam}`);
+        const res = await fetch(`${RTDB_HISTORY_URL}${token ? `?auth=${token}` : ''}`);
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
         if (!data) return [];
-
         const list = Array.isArray(data) ? data : Object.values(data);
-        historyCache = list.filter(s => s && s.stacje).sort((a, b) => snapTime(a) - snapTime(b));
+        historyCache = list.filter(s => s?.stacje).sort((a, b) => snapTime(a) - snapTime(b));
         historyCacheTime = now;
         return historyCache;
     }
 
-    // Snapshot najblizszy chwili (najnowszy - hoursBack), z pominieciem samego najnowszego
     function findClosestSnapshot(snapshots, targetDt) {
-        let best = null;
-        let minDiff = Infinity;
+        let best = null, minDiff = Infinity;
         for (let i = 0; i < snapshots.length - 1; i++) {
             const diff = Math.abs(snapTime(snapshots[i]) - targetDt);
-            if (diff < minDiff) {
-                minDiff = diff;
-                best = snapshots[i];
-            }
+            if (diff < minDiff) { minDiff = diff; best = snapshots[i]; }
         }
         return best;
     }
@@ -73,33 +60,16 @@
     function isWindOutlier(zmienna, meta, vNow, vPast) {
         if (zmienna !== 'wiatr' && zmienna !== 'wiatr_sr') return false;
         const nameUp = (meta.nazwa || '').toUpperCase();
-        const isMountain = nameUp.includes('ŚNIEŻKA') || nameUp.includes('KASPROWY');
-        return (vNow > 120 || vPast > 120) && !isMountain;
+        return (vNow > 120 || vPast > 120) && !nameUp.includes('ŚNIEŻKA') && !nameUp.includes('KASPROWY');
     }
 
     function pushTrendPoint(result, ctx, meta, vNow, vPast) {
-        const delta = Math.round((vNow - vPast) * 10) / 10;
-        const rate = Math.round((delta / ctx.dtHours) * 10) / 10;
-        const znak = rate > 0 ? '+' : '';
-        const dZnak = delta > 0 ? '+' : '';
-        result.pt_lats.push(meta.lat);
-        result.pt_lons.push(meta.lon);
-        result.pt_vals.push(rate);
-        result.pt_dirs.push(null);
-        result.pt_txts.push(`${znak}${rate.toFixed(1)}`);
-        result.pt_hov.push(
-            `<b>${meta.nazwa}</b><br>` +
-            `Trend ${ctx.zi.nazwa}: <b>${znak}${rate.toFixed(1)} ${ctx.zi.unit}/h</b><br>` +
-            `Zmiana w ${ctx.dtHours.toFixed(1)}h: ${dZnak}${delta.toFixed(1)} ${ctx.zi.unit} ` +
-            `(z ${vPast} o ${ctx.pTime} do ${vNow} o ${ctx.nTime})`
-        );
-        result.pt_meta.push({
-            id: meta.kod || meta.id || '',
-            nazwa: meta.nazwa || '',
-            czas: ctx.nTimeIso || '',
-            zrodlo: 'IMGW',
-            typ: 'TREND'
-        });
+        const delta = Math.round((vNow - vPast) * 10) / 10, rate = Math.round((delta / ctx.dtHours) * 10) / 10;
+        const znak = rate > 0 ? '+' : '', dZnak = delta > 0 ? '+' : '';
+        result.pt_lats.push(meta.lat); result.pt_lons.push(meta.lon); result.pt_vals.push(rate);
+        result.pt_dirs.push(null); result.pt_txts.push(`${znak}${rate.toFixed(1)}`);
+        result.pt_hov.push(`<b>${meta.nazwa}</b><br>Trend ${ctx.zi.nazwa}: <b>${znak}${rate.toFixed(1)} ${ctx.zi.unit}/h</b><br>Zmiana w ${ctx.dtHours.toFixed(1)}h: ${dZnak}${delta.toFixed(1)} ${ctx.zi.unit} (z ${vPast} o ${ctx.pTime} do ${vNow} o ${ctx.nTime})`);
+        result.pt_meta.push({ id: meta.kod || meta.id || '', nazwa: meta.nazwa || '', czas: ctx.nTimeIso || '', zrodlo: 'IMGW', typ: 'TREND' });
     }
 
     // Tempo zmian na godzine miedzy najnowszym snapshotem a snapshotem sprzed N godzin
@@ -122,20 +92,10 @@
 
         const pastMap = new Map((pastSnap.stacje || []).map(s => [String(s.kod), s]));
         const zi = window.BMapaApi.DEFAULT_ZMIENNE[zmienna] || window.BMapaApi.DEFAULT_ZMIENNE['temp'];
-        const ctx = {
-            zi,
-            dtHours,
-            pTime: formatHm(pastDt),
-            nTime: formatHm(latestDt),
-            pTimeIso: pastDt.toISOString(),
-            nTimeIso: latestDt.toISOString()
-        };
+        const ctx = { zi, dtHours, pTime: formatHm(pastDt), nTime: formatHm(latestDt), pTimeIso: pastDt.toISOString(), nTimeIso: latestDt.toISOString() };
         const result = emptyResult();
-        result.horyzont = okres;
-        result.typ_danych = 'TREND';
-        result.czas_od_utc = pastDt.toISOString();
-        result.czas_do_utc = latestDt.toISOString();
-        result.latestTimeMs = latestDt.getTime();
+        result.horyzont = okres; result.typ_danych = 'TREND';
+        result.czas_od_utc = pastDt.toISOString(); result.czas_do_utc = latestDt.toISOString(); result.latestTimeMs = latestDt.getTime();
 
         for (const st of (latestSnap.stacje || [])) {
             const kod = String(st.kod);
@@ -152,9 +112,7 @@
     function collectStationHistory(snapshots, zmienna) {
         const history = new Map();
         for (const snap of snapshots) {
-            const sDt = snapTime(snap);
-            const sTime = formatHm(sDt);
-            const sIso = sDt.toISOString();
+            const sDt = snapTime(snap), sTime = formatHm(sDt), sIso = sDt.toISOString();
             for (const st of (snap.stacje || [])) {
                 const val = getStationVal(st, zmienna);
                 if (val === null) continue;
@@ -171,67 +129,60 @@
         if (!snapshots.length) return { error: 'Brak snapshotów w historii Firebase.' };
         const isMax = okres.startsWith('max');
         const zi = window.BMapaApi.DEFAULT_ZMIENNE[zmienna] || window.BMapaApi.DEFAULT_ZMIENNE['temp'];
-        const pastDt = snapTime(snapshots[0]);
-        const latestDt = snapTime(snapshots[snapshots.length - 1]);
+        const pastDt = snapTime(snapshots[0]), latestDt = snapTime(snapshots[snapshots.length - 1]);
         const result = emptyResult();
-        result.horyzont = okres;
-        result.typ_danych = isMax ? 'MAKSIMUM' : 'MINIMUM';
-        result.czas_od_utc = pastDt.toISOString();
-        result.czas_do_utc = latestDt.toISOString();
-        result.latestTimeMs = latestDt.getTime();
+        result.horyzont = okres; result.typ_danych = isMax ? 'MAKSIMUM' : 'MINIMUM';
+        result.czas_od_utc = pastDt.toISOString(); result.czas_do_utc = latestDt.toISOString(); result.latestTimeMs = latestDt.getTime();
 
         collectStationHistory(snapshots, zmienna).forEach((entries, kod) => {
             const meta = window._stationMetaMap ? window._stationMetaMap[kod] : null;
             if (!meta || !entries.length) return;
             const best = entries.reduce((b, e) => (isMax ? e.val > b.val : e.val < b.val) ? e : b);
-            result.pt_lats.push(meta.lat);
-            result.pt_lons.push(meta.lon);
-            result.pt_vals.push(best.val);
-            result.pt_dirs.push(best.dir ?? null);
-            result.pt_txts.push(`${best.val.toFixed(1)}`);
+            result.pt_lats.push(meta.lat); result.pt_lons.push(meta.lon); result.pt_vals.push(best.val);
+            result.pt_dirs.push(best.dir ?? null); result.pt_txts.push(`${best.val.toFixed(1)}`);
             result.pt_hov.push(`<b>${meta.nazwa}</b><br>${isMax ? 'Maksimum' : 'Minimum'} ${zi.nazwa}: <b>${best.val.toFixed(1)} ${zi.unit}</b> (${best.time})`);
-            result.pt_meta.push({
-                id: kod,
-                nazwa: meta.nazwa || '',
-                czas: best.iso || latestDt.toISOString(),
-                zrodlo: 'IMGW',
-                typ: isMax ? 'MAKSIMUM' : 'MINIMUM'
-            });
+            result.pt_meta.push({ id: kod, nazwa: meta.nazwa || '', czas: best.iso || latestDt.toISOString(), zrodlo: 'IMGW', typ: isMax ? 'MAKSIMUM' : 'MINIMUM' });
         });
         return result;
     }
 
     window.getIMGWHistoryData = async function (zmienna, okres) {
-        if (!window._stationMetaMap || Object.keys(window._stationMetaMap).length === 0) {
-            await window.BMapaApi.getLiveData();
-        }
+        if (!window._stationMetaMap || !Object.keys(window._stationMetaMap).length) await window.BMapaApi.getLiveData();
         const snapshots = await fetchFirebaseHistory();
-        if (okres.startsWith('trend')) return computeTrendData(snapshots, zmienna, okres);
-        return computeMinMaxData(snapshots, zmienna, okres);
+        return okres.startsWith('trend') ? computeTrendData(snapshots, zmienna, okres) : computeMinMaxData(snapshots, zmienna, okres);
     };
 
     window.isHistoryDbEnabled = function () {
-        if (window.firebaseUser) return true;
         const chk = document.getElementById('chk-db-connect');
-        return !!(chk && chk.checked);
+        return !!(window.firebaseUser && chk && chk.checked);
     };
 
-    // Przelacznik polaczenia z RTDB: odblokowuje opcje trendow i ekstremow w selekcie horyzontu
     window.toggleDatabaseConnection = function (forcedState) {
         const chk = document.getElementById('chk-db-connect');
         if (!chk) return;
         if (typeof forcedState === 'boolean') chk.checked = forcedState;
-        const isEnabled = chk.checked;
+        chk.setAttribute('data-user-set', 'true');
+        const isEnabled = !!(window.firebaseUser && chk.checked);
+        const badge = document.getElementById('rtdb-status-badge');
+        if (badge) {
+            if (!window.firebaseUser) {
+                badge.textContent = 'Wymaga logowania';
+                badge.style.color = 'var(--text-muted, #94a3b8)';
+            } else {
+                badge.textContent = isEnabled ? 'RTDB: Aktywne' : 'RTDB: Wyłączone';
+                badge.style.color = isEnabled ? 'var(--accent-success, #22c55e)' : 'var(--text-muted, #94a3b8)';
+            }
+        }
         const okresSelect = document.getElementById('imgw-okres');
         if (!okresSelect) return;
         okresSelect.querySelectorAll('option').forEach(opt => {
             if (opt.value === 'now') return;
             opt.disabled = !isEnabled;
-            opt.title = isEnabled ? '' : 'Wymaga włączenia bazy RTDB';
+            opt.title = isEnabled ? '' : (window.firebaseUser ? 'Włącz przełącznik RTDB' : 'Wymaga logowania kontem Google');
         });
         if (!isEnabled && okresSelect.value !== 'now') {
             okresSelect.value = 'now';
-            window.renderIMGW();
+            if (typeof window.renderIMGW === 'function') window.renderIMGW();
         }
     };
 })();

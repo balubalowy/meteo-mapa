@@ -1,6 +1,8 @@
 // js/map/interpolation.js
 // Numeryczna interpolacja IDW (Inverse Distance Weighting), skale barwne i Marching Squares
 
+import { drawIsolines } from './marching_squares.js';
+
 function _calcWndNorm(kmh, mx = 259) { return +(kmh / mx).toFixed(4); }
 
 export const COLORSCALES = {
@@ -104,6 +106,7 @@ export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, s
         v: vals[i]
     }));
 
+    const valGrid = new Float32Array(gw * gh);
     const heatCanvas = document.createElement('canvas');
     heatCanvas.width = gw;
     heatCanvas.height = gh;
@@ -121,12 +124,15 @@ export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, s
                 num += weight * pts[i].v;
                 den += weight;
             }
-            const rgba = getColorRGBA(num / den, scale, cmin, cmax);
-            const idx = (y * gw + x) * 4;
-            heatImg.data[idx] = rgba[0];
-            heatImg.data[idx + 1] = rgba[1];
-            heatImg.data[idx + 2] = rgba[2];
-            heatImg.data[idx + 3] = rgba[3];
+            const val = num / den;
+            const idx = y * gw + x;
+            valGrid[idx] = val;
+            const rgba = getColorRGBA(val, scale, cmin, cmax);
+            const pIdx = idx * 4;
+            heatImg.data[pIdx] = rgba[0];
+            heatImg.data[pIdx + 1] = rgba[1];
+            heatImg.data[pIdx + 2] = rgba[2];
+            heatImg.data[pIdx + 3] = rgba[3];
         }
     }
     heatCtx.putImageData(heatImg, 0, 0);
@@ -137,6 +143,10 @@ export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, s
     const offCtx = offCanvas.getContext('2d');
     offCtx.imageSmoothingQuality = 'high';
     offCtx.drawImage(heatCanvas, 0, 0, w, h);
+
+    if (drawIso) {
+        drawIsolines(offCtx, valGrid, gw, gh, w, h, cmin, cmax, stepVal, unit);
+    }
 
     if (!clipToPoland) return offCanvas.toDataURL();
 

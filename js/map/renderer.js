@@ -3,6 +3,7 @@
 
 import { DEFAULT_ZMIENNE, generateIDWImage, getColorRGBA } from './interpolation.js';
 import { getIMGWLiveData } from './stations.js';
+import { updateDelayBadge } from './ui.js';
 
 const ISO_STEPS = ['auto', 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 500, 1000];
 
@@ -36,18 +37,13 @@ function resolveOkres() {
     return okres;
 }
 
-function renderMarkers(data, zmienna, okres, scale, cmin, cmax, ptColorMode, showTxt, showPt, showForeign) {
+function renderMarkers(data, zmienna, okres, scale, cmin, cmax, showTxt, showPt, showForeign) {
     for (let i = 0; i < data.pt_lats.length; i++) {
         const isForeign = !!data.pt_foreign?.[i];
         if (isForeign && !showForeign) continue;
 
         const val = data.pt_vals[i];
-        let ptColor = "white";
-        if (ptColorMode === 'scale') {
-            ptColor = `rgb(${getColorRGBA(val, scale, cmin, cmax).slice(0, 3).join(',')})`;
-        } else if (ptColorMode === 'black') {
-            ptColor = "black";
-        }
+        const ptColor = `rgb(${getColorRGBA(val, scale, cmin, cmax).slice(0, 3).join(',')})`;
 
         let htmlContent = '';
         const isForecast = data.pt_types?.[i] === 'PROGNOZA';
@@ -105,21 +101,28 @@ export async function renderIMGW(map) {
     window.currentRenderedOkres = okres;
 
     const zInfo = DEFAULT_ZMIENNE[zmienna] || DEFAULT_ZMIENNE['temp'];
-    let scale = zInfo.cscale;
-    let cmin = zInfo.cmin;
-    let cmax = zInfo.cmax;
+    const curParamName = zInfo.nazwa || zmienna;
+    const paramTimeMs = data.latestTimeMs || 0;
+    if (paramTimeMs > 0) {
+        window.currentDisplayedTimeMs = paramTimeMs;
+        window.currentDisplayedParamName = curParamName;
+        updateDelayBadge(paramTimeMs, curParamName);
+    }
+
+    const scale = zInfo.cscale;
+    const cmin = zInfo.cmin;
+    const cmax = zInfo.cmax;
 
     const showStations = window.MAP_LAYERS?.stations?.visible ?? true;
     const showInter = window.MAP_LAYERS?.inter?.visible ?? true;
     const showTxt = document.getElementById('chk-txt')?.checked ?? true;
     const showPt = document.getElementById('chk-pt')?.checked ?? false;
     const showIso = document.getElementById('chk-iso')?.checked ?? false;
-    const showForeign = document.getElementById('chk-foreign')?.checked ?? true;
-    const ptColorMode = document.getElementById('pt-color-mode')?.value || 'scale';
+    const showForeign = document.getElementById('chk-foreign')?.checked ?? false;
     const opacityBg = (window.MAP_LAYERS?.inter?.opacity ?? 70) / 100.0;
 
     if (showStations && (showTxt || showPt)) {
-        renderMarkers(data, zmienna, okres, scale, cmin, cmax, ptColorMode, showTxt, showPt, showForeign);
+        renderMarkers(data, zmienna, okres, scale, cmin, cmax, showTxt, showPt, showForeign);
     }
 
     if (showInter && data.pt_lats.length > 5) {
@@ -127,11 +130,26 @@ export async function renderIMGW(map) {
         const rawStep = isoSlider ? (ISO_STEPS[parseInt(isoSlider.value, 10)] ?? 'auto') : 'auto';
         const stepVal = rawStep !== 'auto' ? parseFloat(rawStep) : (zInfo.step || 2.0);
 
+        let idwLats = data.pt_lats;
+        let idwLons = data.pt_lons;
+        let idwVals = data.pt_vals;
+
+        if (!showForeign && data.pt_foreign) {
+            idwLats = []; idwLons = []; idwVals = [];
+            for (let i = 0; i < data.pt_lats.length; i++) {
+                if (!data.pt_foreign[i]) {
+                    idwLats.push(data.pt_lats[i]);
+                    idwLons.push(data.pt_lons[i]);
+                    idwVals.push(data.pt_vals[i]);
+                }
+            }
+        }
+
         const hasForeign = showForeign && data.pt_foreign?.some(Boolean);
         const geoBounds = hasForeign ? { minLat: 47.0, maxLat: 56.5, minLon: 11.0, maxLon: 27.5 } : { minLat: 48.5, maxLat: 55.5, minLon: 13.5, maxLon: 24.5 };
         const bounds = hasForeign ? [[47.0, 11.0], [56.5, 27.5]] : [[48.5, 13.5], [55.5, 24.5]];
 
-        const dataUrl = generateIDWImage(data.pt_lats, data.pt_lons, data.pt_vals, scale, cmin, cmax, showIso, stepVal, zInfo.unit, geoBounds, !hasForeign);
+        const dataUrl = generateIDWImage(idwLats, idwLons, idwVals, scale, cmin, cmax, showIso, stepVal, zInfo.unit, geoBounds, !hasForeign);
         idwOverlay = L.imageOverlay(dataUrl, bounds, { opacity: opacityBg, pane: 'weatherPane' }).addTo(map);
         window.idwOverlay = idwOverlay;
     }

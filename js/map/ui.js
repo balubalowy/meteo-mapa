@@ -84,4 +84,10 @@ export function initUIControls(map) {
             setTimeout(() => map?.invalidateSize(), 150);
         }
     });
+
+    setInterval(() => {
+        if (window.currentDisplayedTimeMs) {
+            updateDelayBadge(window.currentDisplayedTimeMs, window.currentDisplayedParamName);
+        }
+    }, 30000);
 }

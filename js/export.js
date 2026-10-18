@@ -39,24 +39,22 @@
             typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - 5 * 3600000)
         );
 
-        let opis = '';
-        let fileTag = '';
+        let opis = '', fileTag = '';
         const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const timeDoLocal = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
         const timeOdLocal = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const ymd = formatYmdUtc(dtDo), hmDo = `${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}`, hmOd = `${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}`;
 
         if (typDanych === 'AKTUALNE') {
             opis = `Aktualne: ${dataStr}, ${timeDoLocal} (${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `aktualne_${formatYmdUtc(dtDo)}T${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
-        } else if (typDanych === 'MINIMUM') {
-            opis = `Minimum (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `min5h_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
-        } else if (typDanych === 'MAKSIMUM') {
-            opis = `Maksimum (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `max5h_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+            fileTag = `aktualne_${ymd}T${hmDo}Z`;
+        } else if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
+            const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
+            opis = `${lbl} (5h): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
+            fileTag = `${typDanych === 'MINIMUM' ? 'min5h' : 'max5h'}_${ymd}T${hmOd}-${hmDo}Z`;
         } else {
             opis = `Trend (${horyzont}): ${dataStr}, ${timeOdLocal}–${timeDoLocal} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`;
-            fileTag = `${horyzont}_${formatYmdUtc(dtDo)}T${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}-${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}Z`;
+            fileTag = `${horyzont}_${ymd}T${hmOd}-${hmDo}Z`;
         }
 
         return { typDanych, horyzont, czasOdIso: toUtcIso(dtOd), czasDoIso: toUtcIso(dtDo), opis, fileTag };
@@ -64,33 +62,23 @@
 
     function buildRowsFromParam(paramKey, pData) {
         if (!pData || !Array.isArray(pData.pt_lats)) return [];
-        const rows = [];
-        const count = pData.pt_lats.length;
-        const unit = PARAM_UNITS[paramKey] || '';
-        const scope = resolveScope(pData);
+        const rows = [], count = pData.pt_lats.length, unit = PARAM_UNITS[paramKey] || '', scope = resolveScope(pData);
 
         for (let i = 0; i < count; i++) {
             const meta = (pData.pt_meta && pData.pt_meta[i]) || {};
             const isModel = (pData.pt_types && pData.pt_types[i] === 'PROGNOZA');
             const typ = isModel ? 'MODEL' : (meta.typ || 'ODCZYT');
             const zrodlo = meta.zrodlo || (isModel ? 'ICON' : (pData.pt_foreign && pData.pt_foreign[i] ? 'ASOS' : 'IMGW'));
-            const id = meta.id || '';
-            const nazwa = meta.nazwa || '';
-            const lat = pData.pt_lats[i];
-            const lon = pData.pt_lons[i];
-            const wartosc = pData.pt_vals[i];
+            const lat = pData.pt_lats[i], lon = pData.pt_lons[i], wartosc = pData.pt_vals[i];
             const kierunek = (pData.pt_dirs && pData.pt_dirs[i] !== null && !isNaN(pData.pt_dirs[i])) ? pData.pt_dirs[i] : '';
             const czas = meta.czas || (pData.latestTimeMs ? toUtcIso(new Date(pData.latestTimeMs)) : scope.czasDoIso);
 
             rows.push([
-                escapeCsv(id), escapeCsv(nazwa),
-                lat.toFixed(4), lon.toFixed(4),
-                escapeCsv(paramKey),
-                (wartosc !== null && !isNaN(wartosc)) ? wartosc.toFixed(2) : '',
-                escapeCsv(unit),
+                escapeCsv(meta.id || ''), escapeCsv(meta.nazwa || ''),
+                lat.toFixed(4), lon.toFixed(4), escapeCsv(paramKey),
+                (wartosc !== null && !isNaN(wartosc)) ? wartosc.toFixed(2) : '', escapeCsv(unit),
                 escapeCsv(scope.typDanych), escapeCsv(scope.horyzont),
-                escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso),
-                escapeCsv(czas),
+                escapeCsv(scope.czasOdIso), escapeCsv(scope.czasDoIso), escapeCsv(czas),
                 kierunek !== '' ? Number(kierunek).toFixed(0) : '',
                 escapeCsv(zrodlo), escapeCsv(typ)
             ]);
@@ -100,13 +88,9 @@
 
     function triggerDownload(csvContent, filename) {
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = filename;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }
 

@@ -3,12 +3,11 @@
 
 import { SYNOP_STATIONS_COORDS } from './coords.js';
 import { DEFAULT_ZMIENNE } from './interpolation.js';
-import { getMinDistKm, fetchForeignASOSData, fetchIconModelData } from './external_sources.js';
+import { fetchForeignASOSData, fetchIconModelData, parseASOSData, parseModelData } from './external_sources.js';
 
 const COMPASS_TO_DEG = {
-    'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5, 'E': 90, 'ESE': 112.5,
-    'SE': 135, 'SSE': 157.5, 'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
-    'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+    'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5, 'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+    'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5, 'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
 };
 
 const imgwLiveCacheByMode = {};
@@ -21,11 +20,9 @@ export function calculateDewPoint(temp_c, rh_pct) {
 }
 
 export function toIsoUtc(input) {
-    if (input === null || input === undefined || input === '') return '';
-    let ms = NaN;
-    if (typeof input === 'number') {
-        ms = input;
-    } else {
+    if (!input) return '';
+    let ms = typeof input === 'number' ? input : NaN;
+    if (isNaN(ms)) {
         const s = String(input).trim();
         const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
         ms = Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
@@ -33,21 +30,23 @@ export function toIsoUtc(input) {
     return (isNaN(ms) || ms <= 0) ? '' : new Date(ms).toISOString().replace('.000Z', 'Z');
 }
 
+const fmtTime = s => {
+    const m = String(s || '').match(/(\d{2}:\d{2})/);
+    return m ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${m[1]})</span>` : '';
+};
+
 export async function getIMGWLiveData(targetParam = null) {
     const chkModel = document.getElementById('chk-source-model');
-    const providerRR = document.getElementById('provider-rr');
-    const isRR = providerRR?.checked ?? false;
+    const isRR = document.getElementById('provider-rr')?.checked ?? false;
     const dataMode = chkModel?.checked ? 'hybrid' : 'stations';
     const cacheKey = `${dataMode}_${isRR ? 'rr' : 'imgw'}`;
     const now = Date.now();
 
     const cached = imgwLiveCacheByMode[cacheKey];
-    const isSnowParam = targetParam === 'snieg' || targetParam === 'snieg_swiezy';
-    const snowMissing = isSnowParam && cached?.data && (!cached.data[targetParam] || !cached.data[targetParam].pt_lats.length);
+    const isSnow = targetParam === 'snieg' || targetParam === 'snieg_swiezy';
+    const snowMiss = isSnow && cached?.data && (!cached.data[targetParam] || !cached.data[targetParam].pt_lats.length);
 
-    if (cached && (now - cached.time < 60000) && !snowMissing) {
-        return cached.data;
-    }
+    if (cached && (now - cached.time < 60000) && !snowMiss) return cached.data;
 
     const loadingEl = document.getElementById('imgw-loading');
     if (loadingEl) {
@@ -82,6 +81,11 @@ export async function getIMGWLiveData(targetParam = null) {
                 const coord = SYNOP_STATIONS_COORDS[st.id_stacji];
                 if (isNaN(pVal) || !pVal || !coord) return;
                 const sName = coord.name || st.stacja;
+                const timeStr = `${String(st.godzina_pomiaru).padStart(2, '0')}:00`;
+                const sIso = toIsoUtc(`${st.data_pomiaru} ${timeStr}:00`);
+                const sMs = sIso ? Date.parse(sIso) : NaN;
+                if (!isNaN(sMs) && sMs > dataObj['cisnienie'].latestTimeMs) dataObj['cisnienie'].latestTimeMs = sMs;
+
                 window._stationMetaMap = window._stationMetaMap || {};
                 window._stationMetaMap[String(st.id_stacji)] = { lat: coord.lat, lon: coord.lon, nazwa: sName };
 
@@ -90,10 +94,10 @@ export async function getIMGWLiveData(targetParam = null) {
                 dataObj['cisnienie'].pt_vals.push(pVal);
                 dataObj['cisnienie'].pt_dirs.push(null);
                 dataObj['cisnienie'].pt_txts.push(pVal.toFixed(1));
-                dataObj['cisnienie'].pt_hov.push(`<b>${sName}</b><br>QFF: <b>${pVal.toFixed(1)} hPa</b>`);
+                dataObj['cisnienie'].pt_hov.push(`<b>${sName}</b><br>QFF: <b>${pVal.toFixed(1)} hPa</b>${fmtTime(timeStr)}`);
                 dataObj['cisnienie'].pt_foreign.push(false);
                 dataObj['cisnienie'].pt_types.push('ODCZYT');
-                dataObj['cisnienie'].pt_meta.push({ id: String(st.id_stacji), nazwa: sName, zrodlo: 'SYNOP', czas: toIsoUtc(`${st.data_pomiaru} ${String(st.godzina_pomiaru).padStart(2, '0')}:00:00`) });
+                dataObj['cisnienie'].pt_meta.push({ id: String(st.id_stacji), nazwa: sName, zrodlo: 'SYNOP', czas: sIso });
                 realCoords['cisnienie'].lats.push(coord.lat);
                 realCoords['cisnienie'].lons.push(coord.lon);
             });
@@ -122,18 +126,22 @@ export async function getIMGWLiveData(targetParam = null) {
                 const wPor = parseFloat(isRR ? (st.predWiatruMax10min ?? st.predWiatru) : (st.wiatr_poryw_10min ?? st.wiatr_predkosc_maksymalna));
                 const dirStr = isRR ? st.kierWiatru : st.wiatr_kierunek;
                 const dir = typeof dirStr === 'string' ? COMPASS_TO_DEG[dirStr.trim().toUpperCase()] : parseFloat(dirStr);
+                const tGrunt = parseFloat(isRR ? (st.tempGrunt ?? st.temperatura_gruntu) : st.temperatura_gruntu);
 
-                const add = (z, v, txt, hov, dVal) => {
+                const add = (z, v, txt, hov, dVal, tRaw) => {
                     if (isNaN(v) || v === null) return;
+                    const tIso = toIsoUtc(tRaw || (isRR ? st.tempLastTime : st.temperatura_powietrza_data));
+                    const tMs = tIso ? Date.parse(tIso) : NaN;
+                    if (!isNaN(tMs) && tMs > dataObj[z].latestTimeMs) dataObj[z].latestTimeMs = tMs;
                     dataObj[z].pt_lats.push(lat);
                     dataObj[z].pt_lons.push(lon);
                     dataObj[z].pt_vals.push(v);
                     dataObj[z].pt_dirs.push(dVal ?? null);
                     dataObj[z].pt_txts.push(txt);
-                    dataObj[z].pt_hov.push(`<b>${nazwa}</b><br>${hov}`);
+                    dataObj[z].pt_hov.push(`<b>${nazwa}</b><br>${hov}${fmtTime(tRaw || (isRR ? st.tempLastTime : st.temperatura_powietrza_data))}`);
                     dataObj[z].pt_foreign.push(false);
                     dataObj[z].pt_types.push('ODCZYT');
-                    dataObj[z].pt_meta.push({ id: kod, nazwa, zrodlo: isRR ? 'RR' : 'IMGW', czas: toIsoUtc(isRR ? st.tempLastTime : st.temperatura_powietrza_data) });
+                    dataObj[z].pt_meta.push({ id: kod, nazwa, zrodlo: isRR ? 'RR' : 'IMGW', czas: tIso });
                     realCoords[z].lats.push(lat);
                     realCoords[z].lons.push(lon);
                 };
@@ -144,10 +152,15 @@ export async function getIMGWLiveData(targetParam = null) {
                 if (!isNaN(lcl)) add('lcl', lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>`);
                 if (!isNaN(wSr)) add('wiatr_sr', isRR ? wSr : wSr * 3.6, Math.round(isRR ? wSr : wSr * 3.6).toString(), `Śr. Wiatr: <b>${Math.round(isRR ? wSr : wSr * 3.6)} km/h</b>`, dir);
                 if (!isNaN(wPor)) add('wiatr', isRR ? wPor : wPor * 3.6, Math.round(isRR ? wPor : wPor * 3.6).toString(), `Maks. Wiatr: <b>${Math.round(isRR ? wPor : wPor * 3.6)} km/h</b>`, dir);
+                if (!isNaN(tGrunt)) add('grunt', tGrunt, tGrunt.toFixed(1) + '°', `T grunt: <b>${tGrunt.toFixed(1)}°C</b>`, null, isRR ? st.tempGruntTime : st.temperatura_gruntu_data);
             });
         }
 
-        // 3. ŚNIEG IMGW
+        // 3. Stacje zagraniczne ASOS i model ICON
+        parseASOSData(asosData, dataObj, realCoords);
+        parseModelData(modelData, dataObj, realCoords, dataMode === 'hybrid');
+
+        // 4. Śnieg IMGW
         if (snowData) {
             ['snieg', 'snieg_swiezy'].forEach(sp => {
                 if (snowData[sp]?.pt_lats) {
@@ -177,9 +190,6 @@ export async function getIMGWLiveData(targetParam = null) {
 }
 
 // Rejestracja publicznego API dla export.js i history.js
-window.BMapaApi = {
-    getLiveData: getIMGWLiveData,
-    calculateDewPoint,
-    DEFAULT_ZMIENNE
-};
+window.BMapaApi = { getLiveData: getIMGWLiveData, calculateDewPoint, DEFAULT_ZMIENNE };
 window.getMapExportData = async (param = null) => await getIMGWLiveData(param);
+

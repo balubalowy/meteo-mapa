@@ -16,24 +16,14 @@ function isUserAuthorized(email) {
 }
 
 function updateRtdbSelectUI(isAuth) {
-    const okresSelect = document.getElementById('imgw-okres');
-    const badge = document.getElementById('rtdb-status-badge');
-    
-    if (badge) {
-        badge.textContent = isAuth ? 'RTDB: Aktywne' : 'Tylko dla zalogowanych';
-        badge.style.color = isAuth ? 'var(--accent-success, #22c55e)' : 'var(--text-muted, #94a3b8)';
+    const chk = document.getElementById('chk-db-connect');
+    if (chk) {
+        chk.disabled = !isAuth;
+        if (!isAuth) chk.checked = false;
+        else if (!chk.hasAttribute('data-user-set')) chk.checked = true;
     }
-
-    if (!okresSelect) return;
-    okresSelect.querySelectorAll('option').forEach(opt => {
-        if (opt.value === 'now') return;
-        opt.disabled = !isAuth;
-        opt.title = isAuth ? '' : 'Wymaga zalogowania kontem Google';
-    });
-
-    if (!isAuth && okresSelect.value !== 'now') {
-        okresSelect.value = 'now';
-        if (typeof window.renderIMGW === 'function') window.renderIMGW();
+    if (typeof window.toggleDatabaseConnection === 'function') {
+        window.toggleDatabaseConnection(chk?.checked);
     }
 }
 

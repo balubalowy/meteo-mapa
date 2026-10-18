@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
   <link rel="stylesheet" href="css/bcore.css">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/map.css">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -49,8 +50,8 @@
                 Radar
             </div>
             <!-- Przełącznik źródła radaru -->
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; border: 1px solid var(--border-subtle); text-align: center;">IMGW</button>
+            <div style="display: flex; gap: 4px; background: var(--bg-secondary); padding: 3px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 8px;">
+                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; text-align: center;">IMGW</button>
                 <button id="radar-src-rv" class="btn btn-primary" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">RainViewer</button>
             </div>
 
@@ -72,7 +73,7 @@
                 <div style="display: flex; flex-direction: column; gap: 6px; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">STACJE:</span>
-                        <div style="display: flex; gap: 4px;">
+                        <div style="display: gap: 4px; display: flex;">
                             <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Oficjalne stacje IMGW (odczyty godzinowe)">
                                 <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
                                 IMGW
@@ -112,7 +113,13 @@
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
                         <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Horyzont:</label>
-                        <span id="rtdb-status-badge" style="font-size: 0.7rem; color: var(--text-muted);" title="Dostęp do bazy danych IMGW z historią wymaga logowania">Tylko dla zalogowanych</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span id="rtdb-status-badge" style="font-size: 0.7rem; color: var(--text-muted);" title="Dostęp do bazy danych IMGW z historią wymaga logowania">Tylko dla zalogowanych</span>
+                            <label class="toggle-switch" style="margin: 0;" title="Włącz / wyłącz połączenie z bazą RTDB (wymaga logowania)">
+                                <input type="checkbox" id="chk-db-connect" onchange="window.toggleDatabaseConnection && window.toggleDatabaseConnection(this.checked)" disabled>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                     <select id="imgw-okres" class="form-select" aria-label="Horyzont czasowy obserwacji IMGW" onchange="window.renderIMGW && window.renderIMGW()" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
                         <option value="now" selected>Teraz</option>
@@ -147,14 +154,6 @@
                             <span>200</span>
                             <span>1000</span>
                         </div>
-                    </div>
-                    <div style="margin-top: 6px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Kolor Punktów:</label>
-                        <select id="pt-color-mode" class="form-select" aria-label="Kolorowanie punktów stacji" onchange="window.renderIMGW()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; background-color: var(--bg-tertiary); border: 1px solid var(--border-subtle); color: var(--text-primary); width: 100%;">
-                            <option value="scale">Zależny od Skali</option>
-                            <option value="white">Białe</option>
-                            <option value="black">Czarne</option>
-                        </select>
                     </div>
                 </div>
 
