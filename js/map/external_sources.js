@@ -92,8 +92,10 @@ export async function fetchIconModelData() {
     }
 }
 
-function appendPoint(dataObj, realCoords, z, pt, val, txt, hov, dir = null) {
+function appendPoint(ctx, z, pt, metric) {
+    const { val, txt, hov, dir } = metric;
     if (val == null || isNaN(val)) return;
+    const { dataObj, realCoords } = ctx;
     dataObj[z].pt_lats.push(pt.lat);
     dataObj[z].pt_lons.push(pt.lon);
     dataObj[z].pt_vals.push(val);
@@ -109,7 +111,7 @@ function appendPoint(dataObj, realCoords, z, pt, val, txt, hov, dir = null) {
     }
 }
 
-function addAsosStationPoints(st, dataObj, realCoords, now) {
+function addAsosStationPoints(st, ctx, now) {
     const lat = parseFloat(st.lat), lon = parseFloat(st.lon);
     if (isNaN(lat) || isNaN(lon)) return;
     const vStr = st.valid ? String(st.valid).trim() : '';
@@ -132,24 +134,27 @@ function addAsosStationPoints(st, dataObj, realCoords, now) {
 
     const pt = { lat, lon, name: sName, source: 'ASOS', isForeign: true, type: 'ODCZYT', id: st.station || '', time: st.valid || '', badgeColor: '#10b981', badgeBorder: 'rgba(16,185,129,0.3)' };
 
-    appendPoint(dataObj, realCoords, 'temp', pt, temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
-    appendPoint(dataObj, realCoords, 'cisnienie', pt, pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-    appendPoint(dataObj, realCoords, 'wilg', pt, rh, rh.toFixed(0) + '%', `RH: <b>${rh.toFixed(0)}%</b>${timeLabel}`);
-    appendPoint(dataObj, realCoords, 'rosy', pt, dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
-    appendPoint(dataObj, realCoords, 'lcl', pt, lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
-    appendPoint(dataObj, realCoords, 'wiatr', pt, wGust, wGust.toFixed(0), `Maks. Wiatr: <b>${wGust.toFixed(0)} km/h</b>${timeLabel}`, wDir);
-    appendPoint(dataObj, realCoords, 'wiatr_sr', pt, wSpd, wSpd.toFixed(0), `Śr. Wiatr: <b>${wSpd.toFixed(0)} km/h</b>${timeLabel}`, wDir);
+    const metrics = [
+        { z: 'temp', val: temp, txt: `${temp?.toFixed(1)}°`, hov: `T2m: <b>${temp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'cisnienie', val: pMsl, txt: pMsl?.toFixed(1), hov: `QFF: <b>${pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
+        { z: 'wilg', val: rh, txt: `${rh?.toFixed(0)}%`, hov: `RH: <b>${rh?.toFixed(0)}%</b>${timeLabel}` },
+        { z: 'rosy', val: dp, txt: `${dp?.toFixed(1)}°`, hov: `Td: <b>${dp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'lcl', val: lcl, txt: `${lcl}m`, hov: `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}` },
+        { z: 'wiatr', val: wGust, txt: wGust?.toFixed(0), hov: `Maks. Wiatr: <b>${wGust?.toFixed(0)} km/h</b>${timeLabel}`, dir: wDir },
+        { z: 'wiatr_sr', val: wSpd, txt: wSpd?.toFixed(0), hov: `Śr. Wiatr: <b>${wSpd?.toFixed(0)} km/h</b>${timeLabel}`, dir: wDir }
+    ];
+
+    for (const m of metrics) appendPoint(ctx, m.z, pt, m);
 }
 
 export function parseASOSData(asosData, dataObj, realCoords) {
     if (!Array.isArray(asosData) || !asosData.length) return;
     const now = Date.now();
-    for (const st of asosData) {
-        addAsosStationPoints(st, dataObj, realCoords, now);
-    }
+    const ctx = { dataObj, realCoords };
+    for (const st of asosData) addAsosStationPoints(st, ctx, now);
 }
 
-function addIconPoint(item, dataObj, realCoords, isHybrid, isForeign) {
+function addIconPoint(item, ctx, isHybrid, isForeign) {
     const cur = item.current;
     if (!cur) return;
     const lat = item.latitude, lon = item.longitude;
@@ -162,25 +167,32 @@ function addIconPoint(item, dataObj, realCoords, isHybrid, isForeign) {
     const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
 
     const pt = { lat, lon, name: sName, source: 'ICON', isForeign, type: 'PROGNOZA', id: '', time: cur.time || '', badgeColor: '#60a5fa', badgeBorder: 'rgba(96,165,250,0.3)' };
-    const canAdd = z => !isHybrid || !realCoords?.[z]?.lats?.length || getMinDistKm(lat, lon, realCoords[z].lats, realCoords[z].lons) >= 22.0;
+    const canAdd = z => !isHybrid || !ctx.realCoords?.[z]?.lats?.length || getMinDistKm(lat, lon, ctx.realCoords[z].lats, ctx.realCoords[z].lons) >= 22.0;
 
-    if (temp != null && canAdd('temp')) appendPoint(dataObj, null, 'temp', pt, temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>${timeLabel}`);
-    if (pMsl != null && canAdd('cisnienie')) appendPoint(dataObj, null, 'cisnienie', pt, pMsl, pMsl.toFixed(1), `QFF: <b>${pMsl.toFixed(1)} hPa</b>${timeLabel}`);
-    if (rh != null && canAdd('wilg')) appendPoint(dataObj, null, 'wilg', pt, rh, Math.round(rh) + '%', `RH: <b>${Math.round(rh)}%</b>${timeLabel}`);
-    if (dp != null && canAdd('rosy')) appendPoint(dataObj, null, 'rosy', pt, dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>${timeLabel}`);
-    if (!isNaN(lcl) && canAdd('lcl')) appendPoint(dataObj, null, 'lcl', pt, lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}`);
-    if (wGust != null && canAdd('wiatr')) appendPoint(dataObj, null, 'wiatr', pt, wGust, Math.round(wGust).toString(), `Maks. Wiatr: <b>${Math.round(wGust)} km/h</b>${timeLabel}`, wDir);
-    if (wSpd != null && canAdd('wiatr_sr')) appendPoint(dataObj, null, 'wiatr_sr', pt, wSpd, Math.round(wSpd).toString(), `Śr. Wiatr: <b>${Math.round(wSpd)} km/h</b>${timeLabel}`, wDir);
-    if (tSoil != null && canAdd('grunt')) appendPoint(dataObj, null, 'grunt', pt, tSoil, tSoil.toFixed(1) + '°', `T grunt (6cm): <b>${tSoil.toFixed(1)}°C</b>${timeLabel}`);
+    const metrics = [
+        { z: 'temp', val: temp, txt: `${temp?.toFixed(1)}°`, hov: `T2m: <b>${temp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'cisnienie', val: pMsl, txt: pMsl?.toFixed(1), hov: `QFF: <b>${pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
+        { z: 'wilg', val: rh, txt: `${Math.round(rh || 0)}%`, hov: `RH: <b>${Math.round(rh || 0)}%</b>${timeLabel}` },
+        { z: 'rosy', val: dp, txt: `${dp?.toFixed(1)}°`, hov: `Td: <b>${dp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'lcl', val: isNaN(lcl) ? null : lcl, txt: `${lcl}m`, hov: `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}` },
+        { z: 'wiatr', val: wGust, txt: Math.round(wGust || 0).toString(), hov: `Maks. Wiatr: <b>${Math.round(wGust || 0)} km/h</b>${timeLabel}`, dir: wDir },
+        { z: 'wiatr_sr', val: wSpd, txt: Math.round(wSpd || 0).toString(), hov: `Śr. Wiatr: <b>${Math.round(wSpd || 0)} km/h</b>${timeLabel}`, dir: wDir },
+        { z: 'grunt', val: tSoil, txt: `${tSoil?.toFixed(1)}°`, hov: `T grunt (6cm): <b>${tSoil?.toFixed(1)}°C</b>${timeLabel}` }
+    ];
+
+    for (const m of metrics) {
+        if (canAdd(m.z)) appendPoint(ctx, m.z, pt, m);
+    }
 }
 
 export function parseModelData(modelData, dataObj, realCoords, isHybrid) {
     if (!modelData) return;
+    const ctx = { dataObj, realCoords };
     if (Array.isArray(modelData.pl)) {
-        for (const item of modelData.pl) addIconPoint(item, dataObj, realCoords, isHybrid, false);
+        for (const item of modelData.pl) addIconPoint(item, ctx, isHybrid, false);
     }
     if (Array.isArray(modelData.foreign)) {
-        for (const item of modelData.foreign) addIconPoint(item, dataObj, realCoords, isHybrid, true);
+        for (const item of modelData.foreign) addIconPoint(item, ctx, isHybrid, true);
     }
 }
 
