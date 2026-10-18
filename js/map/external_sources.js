@@ -93,10 +93,15 @@ export async function fetchIconModelData() {
 
 export function parseASOSData(asosData, dataObj, realCoords) {
     if (!Array.isArray(asosData) || !asosData.length) return;
+    const now = Date.now();
     for (const st of asosData) {
         const lat = parseFloat(st.lat);
         const lon = parseFloat(st.lon);
         if (isNaN(lat) || isNaN(lon)) continue;
+
+        const vStr = st.valid ? String(st.valid).trim() : '';
+        const vMs = vStr ? Date.parse(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z') : NaN;
+        if (!isNaN(vMs) && ((now - vMs) > 9000000 || (now - vMs) < -900000)) continue;
 
         const cc = (st.network || '').slice(0, 2);
         const sName = `${st.name || st.station} [${cc}]`;

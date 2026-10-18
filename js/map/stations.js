@@ -84,7 +84,8 @@ export async function getIMGWLiveData(targetParam = null) {
                 const timeStr = `${String(st.godzina_pomiaru).padStart(2, '0')}:00`;
                 const sIso = toIsoUtc(`${st.data_pomiaru} ${timeStr}:00`);
                 const sMs = sIso ? Date.parse(sIso) : NaN;
-                if (!isNaN(sMs) && sMs > dataObj['cisnienie'].latestTimeMs) dataObj['cisnienie'].latestTimeMs = sMs;
+                if (isNaN(sMs) || (now - sMs) > 9000000 || (now - sMs) < -900000) return;
+                if (sMs > dataObj['cisnienie'].latestTimeMs) dataObj['cisnienie'].latestTimeMs = sMs;
 
                 window._stationMetaMap = window._stationMetaMap || {};
                 window._stationMetaMap[String(st.id_stacji)] = { lat: coord.lat, lon: coord.lon, nazwa: sName };
@@ -128,17 +129,24 @@ export async function getIMGWLiveData(targetParam = null) {
                 const dir = typeof dirStr === 'string' ? COMPASS_TO_DEG[dirStr.trim().toUpperCase()] : parseFloat(dirStr);
                 const tGrunt = parseFloat(isRR ? (st.tempGrunt ?? st.temperatura_gruntu) : st.temperatura_gruntu);
 
+                const tDate = isRR ? st.tempLastTime : st.temperatura_powietrza_data;
+                const rhDate = isRR ? st.tempLastTime : st.wilgotnosc_wzgledna_data;
+                const wDate = isRR ? st.windLastTime : st.wiatr_srednia_predkosc_data;
+                const gDate = isRR ? st.tempGruntTime : st.temperatura_gruntu_data;
+
                 const add = (z, v, txt, hov, dVal, tRaw) => {
                     if (isNaN(v) || v === null) return;
-                    const tIso = toIsoUtc(tRaw || (isRR ? st.tempLastTime : st.temperatura_powietrza_data));
+                    const rTime = tRaw || tDate;
+                    const tIso = toIsoUtc(rTime);
                     const tMs = tIso ? Date.parse(tIso) : NaN;
-                    if (!isNaN(tMs) && tMs > dataObj[z].latestTimeMs) dataObj[z].latestTimeMs = tMs;
+                    if (isNaN(tMs) || (now - tMs) > 9000000 || (now - tMs) < -900000) return;
+                    if (tMs > dataObj[z].latestTimeMs) dataObj[z].latestTimeMs = tMs;
                     dataObj[z].pt_lats.push(lat);
                     dataObj[z].pt_lons.push(lon);
                     dataObj[z].pt_vals.push(v);
                     dataObj[z].pt_dirs.push(dVal ?? null);
                     dataObj[z].pt_txts.push(txt);
-                    dataObj[z].pt_hov.push(`<b>${nazwa}</b><br>${hov}${fmtTime(tRaw || (isRR ? st.tempLastTime : st.temperatura_powietrza_data))}`);
+                    dataObj[z].pt_hov.push(`<b>${nazwa}</b><br>${hov}${fmtTime(rTime)}`);
                     dataObj[z].pt_foreign.push(false);
                     dataObj[z].pt_types.push('ODCZYT');
                     dataObj[z].pt_meta.push({ id: kod, nazwa, zrodlo: isRR ? 'RR' : 'IMGW', czas: tIso });
@@ -146,13 +154,15 @@ export async function getIMGWLiveData(targetParam = null) {
                     realCoords[z].lons.push(lon);
                 };
 
-                if (!isNaN(temp)) add('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>`);
-                if (!isNaN(wilg)) add('wilg', wilg, wilg.toFixed(0) + '%', `RH: <b>${wilg.toFixed(0)}%</b>`);
-                if (dp !== null && !isNaN(dp)) add('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>`);
-                if (!isNaN(lcl)) add('lcl', lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>`);
-                if (!isNaN(wSr)) add('wiatr_sr', isRR ? wSr : wSr * 3.6, Math.round(isRR ? wSr : wSr * 3.6).toString(), `Śr. Wiatr: <b>${Math.round(isRR ? wSr : wSr * 3.6)} km/h</b>`, dir);
-                if (!isNaN(wPor)) add('wiatr', isRR ? wPor : wPor * 3.6, Math.round(isRR ? wPor : wPor * 3.6).toString(), `Maks. Wiatr: <b>${Math.round(isRR ? wPor : wPor * 3.6)} km/h</b>`, dir);
-                if (!isNaN(tGrunt)) add('grunt', tGrunt, tGrunt.toFixed(1) + '°', `T grunt: <b>${tGrunt.toFixed(1)}°C</b>`, null, isRR ? st.tempGruntTime : st.temperatura_gruntu_data);
+                if (!isNaN(temp)) add('temp', temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>`, null, tDate);
+                if (!isNaN(wilg)) add('wilg', wilg, wilg.toFixed(0) + '%', `RH: <b>${wilg.toFixed(0)}%</b>`, null, rhDate);
+                if (dp !== null && !isNaN(dp)) add('rosy', dp, dp.toFixed(1) + '°', `Td: <b>${dp.toFixed(1)}°C</b>`, null, tDate);
+                if (!isNaN(lcl)) add('lcl', lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>`, null, tDate);
+                if (!isNaN(wSr)) add('wiatr_sr', isRR ? wSr : wSr * 3.6, Math.round(isRR ? wSr : wSr * 3.6).toString(), `Śr. Wiatr: <b>${Math.round(isRR ? wSr : wSr * 3.6)} km/h</b>`, dir, wDate);
+                const wPorVal = isRR ? wPor : wPor * 3.6;
+                const wPorDate = isRR ? st.windLastTime : (st.wiatr_poryw_10min_data ?? st.wiatr_predkosc_maksymalna_data);
+                if (!isNaN(wPor)) add('wiatr', wPorVal, Math.round(wPorVal).toString(), `Maks. Wiatr: <b>${Math.round(wPorVal)} km/h</b>`, dir, wPorDate);
+                if (!isNaN(tGrunt)) add('grunt', tGrunt, tGrunt.toFixed(1) + '°', `T grunt: <b>${tGrunt.toFixed(1)}°C</b>`, null, gDate);
             });
         }
 
@@ -163,19 +173,17 @@ export async function getIMGWLiveData(targetParam = null) {
         // 4. Śnieg IMGW
         if (snowData) {
             ['snieg', 'snieg_swiezy'].forEach(sp => {
-                if (snowData[sp]?.pt_lats) {
-                    snowData[sp].pt_lats.forEach((sLat, idx) => {
-                        dataObj[sp].pt_lats.push(sLat);
-                        dataObj[sp].pt_lons.push(snowData[sp].pt_lons[idx]);
-                        dataObj[sp].pt_vals.push(snowData[sp].pt_vals[idx]);
-                        dataObj[sp].pt_dirs.push(null);
-                        dataObj[sp].pt_txts.push(snowData[sp].pt_txts[idx]);
-                        dataObj[sp].pt_hov.push(snowData[sp].pt_hov[idx]);
-                        dataObj[sp].pt_foreign.push(false);
-                        dataObj[sp].pt_types.push('ODCZYT');
-                        dataObj[sp].pt_meta.push(snowData[sp].pt_meta?.[idx] || { id: '', nazwa: '', zrodlo: 'SNIEG', czas: '' });
-                    });
-                }
+                snowData[sp]?.pt_lats?.forEach((sLat, idx) => {
+                    dataObj[sp].pt_lats.push(sLat);
+                    dataObj[sp].pt_lons.push(snowData[sp].pt_lons[idx]);
+                    dataObj[sp].pt_vals.push(snowData[sp].pt_vals[idx]);
+                    dataObj[sp].pt_dirs.push(null);
+                    dataObj[sp].pt_txts.push(snowData[sp].pt_txts[idx]);
+                    dataObj[sp].pt_hov.push(snowData[sp].pt_hov[idx]);
+                    dataObj[sp].pt_foreign.push(false);
+                    dataObj[sp].pt_types.push('ODCZYT');
+                    dataObj[sp].pt_meta.push(snowData[sp].pt_meta?.[idx] || { id: '', nazwa: '', zrodlo: 'SNIEG', czas: '' });
+                });
             });
         }
 
