@@ -20,27 +20,28 @@ function initDataBuffers() {
     return { dataObj, realCoords };
 }
 
-function pushStationPoint(dataObj, realCoords, z, pt, val, txt, hov, dir, timeRaw, now) {
+function pushStationPoint(ctx, z, pt, metric) {
+    const { val, txt, hov, dir, time } = metric;
     if (val == null || isNaN(val)) return;
-    const tIso = toIsoUtc(timeRaw);
+    const tIso = toIsoUtc(time);
     const tMs = tIso ? Date.parse(tIso) : NaN;
-    if (isNaN(tMs) || (now - tMs) > 9000000 || (now - tMs) < -900000) return;
-    if (tMs > dataObj[z].latestTimeMs) dataObj[z].latestTimeMs = tMs;
+    if (isNaN(tMs) || (ctx.now - tMs) > 9000000 || (ctx.now - tMs) < -900000) return;
+    if (tMs > ctx.dataObj[z].latestTimeMs) ctx.dataObj[z].latestTimeMs = tMs;
 
-    dataObj[z].pt_lats.push(pt.lat);
-    dataObj[z].pt_lons.push(pt.lon);
-    dataObj[z].pt_vals.push(val);
-    dataObj[z].pt_dirs.push(dir ?? null);
-    dataObj[z].pt_txts.push(txt);
-    dataObj[z].pt_hov.push(`<b>${pt.nazwa}</b><br>${hov}${fmtTime(timeRaw)}`);
-    dataObj[z].pt_foreign.push(false);
-    dataObj[z].pt_types.push('ODCZYT');
-    dataObj[z].pt_meta.push({ id: pt.kod, nazwa: pt.nazwa, zrodlo: pt.zrodlo, czas: tIso });
-    realCoords[z].lats.push(pt.lat);
-    realCoords[z].lons.push(pt.lon);
+    ctx.dataObj[z].pt_lats.push(pt.lat);
+    ctx.dataObj[z].pt_lons.push(pt.lon);
+    ctx.dataObj[z].pt_vals.push(val);
+    ctx.dataObj[z].pt_dirs.push(dir ?? null);
+    ctx.dataObj[z].pt_txts.push(txt);
+    ctx.dataObj[z].pt_hov.push(`<b>${pt.nazwa}</b><br>${hov}${fmtTime(time)}`);
+    ctx.dataObj[z].pt_foreign.push(false);
+    ctx.dataObj[z].pt_types.push('ODCZYT');
+    ctx.dataObj[z].pt_meta.push({ id: pt.kod, nazwa: pt.nazwa, zrodlo: pt.zrodlo, czas: tIso });
+    ctx.realCoords[z].lats.push(pt.lat);
+    ctx.realCoords[z].lons.push(pt.lon);
 }
 
-function parseSynopPoints(synopData, dataObj, realCoords, now) {
+function parseSynopPoints(synopData, ctx) {
     if (!Array.isArray(synopData)) return;
     synopData.forEach(st => {
         const pVal = parseFloat(st.cisnienie);
@@ -54,22 +55,11 @@ function parseSynopPoints(synopData, dataObj, realCoords, now) {
         window._stationMetaMap[String(st.id_stacji)] = { lat: coord.lat, lon: coord.lon, nazwa: sName };
 
         const pt = { lat: coord.lat, lon: coord.lon, nazwa: sName, kod: String(st.id_stacji), zrodlo: 'SYNOP' };
-        pushStationPoint(dataObj, realCoords, 'cisnienie', pt, pVal, pVal.toFixed(1), `QFF: <b>${pVal.toFixed(1)} hPa</b>`, null, sIso, now);
+        pushStationPoint(ctx, 'cisnienie', pt, { val: pVal, txt: pVal.toFixed(1), hov: `QFF: <b>${pVal.toFixed(1)} hPa</b>`, time: sIso });
     });
 }
 
-function parseTelemetryStation(st, isRR, dataObj, realCoords, now) {
-    if (st.isModel) return;
-    const lat = parseFloat(st.lat);
-    const lon = parseFloat(isRR ? (st.lng ?? st.lon) : st.lon);
-    if (isNaN(lat) || isNaN(lon)) return;
-    const nazwa = isRR ? (st.statName || 'Stacja IMGW') : st.nazwa_stacji;
-    const kod = String(isRR ? st.statId : (st.kod_stacji || st.id_stacji || ''));
-    if (kod) {
-        window._stationMetaMap = window._stationMetaMap || {};
-        window._stationMetaMap[kod] = { lat, lon, nazwa };
-    }
-
+function extractTelemetryMetrics(st, isRR) {
     const temp = parseFloat(isRR ? st.temp : st.temperatura_powietrza);
     const wilg = parseFloat(isRR ? st.wilgBezw : st.wilgotnosc_wzgledna);
     const dp = calculateDewPoint(temp, wilg);
@@ -79,24 +69,44 @@ function parseTelemetryStation(st, isRR, dataObj, realCoords, now) {
     const dirStr = isRR ? st.kierWiatru : st.wiatr_kierunek;
     const dir = typeof dirStr === 'string' ? COMPASS_TO_DEG[dirStr.trim().toUpperCase()] : parseFloat(dirStr);
     const tGrunt = parseFloat(isRR ? (st.tempGrunt ?? st.temperatura_gruntu) : st.temperatura_gruntu);
-
-    const tDate = isRR ? st.tempLastTime : st.temperatura_powietrza_data;
-    const rhDate = isRR ? st.tempLastTime : st.wilgotnosc_wzgledna_data;
-    const wDate = isRR ? st.windLastTime : st.wiatr_srednia_predkosc_data;
-    const gDate = isRR ? st.tempGruntTime : st.temperatura_gruntu_data;
-    const wPorDate = isRR ? st.windLastTime : (st.wiatr_poryw_10min_data ?? st.wiatr_predkosc_maksymalna_data);
-
-    const pt = { lat, lon, nazwa, kod, zrodlo: isRR ? 'RR' : 'IMGW' };
     const wSrVal = !isNaN(wSr) ? (isRR ? wSr : wSr * 3.6) : NaN;
     const wPorVal = !isNaN(wPor) ? (isRR ? wPor : wPor * 3.6) : NaN;
 
-    pushStationPoint(dataObj, realCoords, 'temp', pt, temp, temp.toFixed(1) + '°', `T2m: <b>${temp.toFixed(1)}°C</b>`, null, tDate, now);
-    pushStationPoint(dataObj, realCoords, 'wilg', pt, wilg, wilg.toFixed(0) + '%', `RH: <b>${wilg.toFixed(0)}%</b>`, null, rhDate, now);
-    pushStationPoint(dataObj, realCoords, 'rosy', pt, dp, dp?.toFixed(1) + '°', `Td: <b>${dp?.toFixed(1)}°C</b>`, null, tDate, now);
-    pushStationPoint(dataObj, realCoords, 'lcl', pt, lcl, lcl + 'm', `LCL: <b>${lcl} m n.p.g.</b>`, null, tDate, now);
-    pushStationPoint(dataObj, realCoords, 'wiatr_sr', pt, wSrVal, Math.round(wSrVal).toString(), `Śr. Wiatr: <b>${Math.round(wSrVal)} km/h</b>`, dir, wDate, now);
-    pushStationPoint(dataObj, realCoords, 'wiatr', pt, wPorVal, Math.round(wPorVal).toString(), `Maks. Wiatr: <b>${Math.round(wPorVal)} km/h</b>`, dir, wPorDate, now);
-    pushStationPoint(dataObj, realCoords, 'grunt', pt, tGrunt, tGrunt.toFixed(1) + '°', `T grunt: <b>${tGrunt.toFixed(1)}°C</b>`, null, gDate, now);
+    return {
+        temp, wilg, dp, lcl, tGrunt, dir, wSrVal, wPorVal,
+        tDate: isRR ? st.tempLastTime : st.temperatura_powietrza_data,
+        rhDate: isRR ? st.tempLastTime : st.wilgotnosc_wzgledna_data,
+        wDate: isRR ? st.windLastTime : st.wiatr_srednia_predkosc_data,
+        gDate: isRR ? st.tempGruntTime : st.temperatura_gruntu_data,
+        wPorDate: isRR ? st.windLastTime : (st.wiatr_poryw_10min_data ?? st.wiatr_predkosc_maksymalna_data)
+    };
+}
+
+function parseTelemetryStation(st, isRR, ctx) {
+    if (st.isModel) return;
+    const lat = parseFloat(st.lat), lon = parseFloat(isRR ? (st.lng ?? st.lon) : st.lon);
+    if (isNaN(lat) || isNaN(lon)) return;
+    const nazwa = isRR ? (st.statName || 'Stacja IMGW') : st.nazwa_stacji;
+    const kod = String(isRR ? st.statId : (st.kod_stacji || st.id_stacji || ''));
+    if (kod) {
+        window._stationMetaMap = window._stationMetaMap || {};
+        window._stationMetaMap[kod] = { lat, lon, nazwa };
+    }
+
+    const m = extractTelemetryMetrics(st, isRR);
+    const pt = { lat, lon, nazwa, kod, zrodlo: isRR ? 'RR' : 'IMGW' };
+
+    const metrics = [
+        { z: 'temp', val: m.temp, txt: `${m.temp.toFixed(1)}°`, hov: `T2m: <b>${m.temp.toFixed(1)}°C</b>`, time: m.tDate },
+        { z: 'wilg', val: m.wilg, txt: `${m.wilg.toFixed(0)}%`, hov: `RH: <b>${m.wilg.toFixed(0)}%</b>`, time: m.rhDate },
+        { z: 'rosy', val: m.dp, txt: `${m.dp?.toFixed(1)}°`, hov: `Td: <b>${m.dp?.toFixed(1)}°C</b>`, time: m.tDate },
+        { z: 'lcl', val: m.lcl, txt: `${m.lcl}m`, hov: `LCL: <b>${m.lcl} m n.p.g.</b>`, time: m.tDate },
+        { z: 'wiatr_sr', val: m.wSrVal, txt: Math.round(m.wSrVal).toString(), hov: `Śr. Wiatr: <b>${Math.round(m.wSrVal)} km/h</b>`, dir: m.dir, time: m.wDate },
+        { z: 'wiatr', val: m.wPorVal, txt: Math.round(m.wPorVal).toString(), hov: `Maks. Wiatr: <b>${Math.round(m.wPorVal)} km/h</b>`, dir: m.dir, time: m.wPorDate },
+        { z: 'grunt', val: m.tGrunt, txt: `${m.tGrunt.toFixed(1)}°`, hov: `T grunt: <b>${m.tGrunt.toFixed(1)}°C</b>`, time: m.gDate }
+    ];
+
+    for (const item of metrics) pushStationPoint(ctx, item.z, pt, item);
 }
 
 function appendSnowData(snowData, dataObj) {
@@ -146,10 +156,11 @@ export async function getIMGWLiveData(targetParam = null) {
         ]);
 
         const { dataObj, realCoords } = initDataBuffers();
-        parseSynopPoints(synopData, dataObj, realCoords, now);
+        const ctx = { dataObj, realCoords, now };
+        parseSynopPoints(synopData, ctx);
         const parseList = isRR ? rrData : rawData;
         if (Array.isArray(parseList)) {
-            parseList.forEach(st => parseTelemetryStation(st, isRR, dataObj, realCoords, now));
+            parseList.forEach(st => parseTelemetryStation(st, isRR, ctx));
         }
         parseASOSData(asosData, dataObj, realCoords);
         parseModelData(modelData, dataObj, realCoords, dataMode === 'hybrid');

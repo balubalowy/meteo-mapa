@@ -44,29 +44,33 @@
         return fullText;
     }
 
-    function parseMiddleTokens(tokens) {
-        let grubosc = parseFloat(tokens[0]) || 0;
-        let swiezy = null, gatunek = null, zapas = null, obciazenie = 0;
-
-        for (let i = 1; i < tokens.length; i++) {
-            const t = tokens[i];
-            const hasDot = t.includes('.');
-            if (/^[1-9]$/.test(t) && gatunek === null) {
-                gatunek = parseInt(t, 10);
-            } else if (/^[1-9]\d{2,}$/.test(t) && gatunek === null && zapas === null) {
-                gatunek = parseInt(t[0], 10);
-                zapas = parseFloat(t.substring(1)) || 0;
-            } else if (hasDot && obciazenie === 0) {
-                const val = parseFloat(t) || 0;
-                if (gatunek === null && swiezy === null) swiezy = val;
-                else obciazenie = val;
-            } else if (!hasDot && zapas === null) {
-                const val = parseFloat(t) || 0;
-                if (gatunek === null && swiezy === null) swiezy = val;
-                else zapas = val;
-            }
+    function assignSnowValue(state, val, hasDot) {
+        if (state.gatunek === null && state.swiezy === null) {
+            state.swiezy = val;
+        } else if (hasDot && state.obciazenie === 0) {
+            state.obciazenie = val;
+        } else if (!hasDot && state.zapas === null) {
+            state.zapas = val;
         }
-        return { grubosc, swiezy, gatunek, zapas, obciazenie };
+    }
+
+    function updateSnowState(state, token) {
+        if (/^[1-9]$/.test(token) && state.gatunek === null) {
+            state.gatunek = parseInt(token, 10);
+            return;
+        }
+        if (/^[1-9]\d{2,}$/.test(token) && state.gatunek === null && state.zapas === null) {
+            state.gatunek = parseInt(token[0], 10);
+            state.zapas = parseFloat(token.substring(1)) || 0;
+            return;
+        }
+        assignSnowValue(state, parseFloat(token) || 0, token.includes('.'));
+    }
+
+    function parseMiddleTokens(tokens) {
+        const state = { grubosc: parseFloat(tokens[0]) || 0, swiezy: null, gatunek: null, zapas: null, obciazenie: 0 };
+        for (let i = 1; i < tokens.length; i++) updateSnowState(state, tokens[i]);
+        return state;
     }
 
     function extractStationChunk(lp, fullText) {
@@ -102,25 +106,32 @@
         return stationsMeta.map(meta => parseSingleSnowStation(meta, fullText, reportDate)).filter(Boolean);
     }
 
-    async function fetchSnowRecords() {
-        const now = Date.now();
-        if (_snowCache && (now - _snowCacheTime < CACHE_TTL)) return _snowCache;
-
-        const stationsMeta = await fetch('dane/snow_stations.json').then(r => r.ok ? r.json() : []).catch(() => []);
-        let records = [];
-
+    async function fetchPdfSnowRecords(stationsMeta) {
         try {
             const pdfPromise = extractTextFromPdf('https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf');
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500));
             const pdfText = await Promise.race([pdfPromise, timeoutPromise]);
             if (pdfText && pdfText.length > 500 && stationsMeta.length > 0) {
-                records = parseSnowRecords(pdfText, stationsMeta);
+                return parseSnowRecords(pdfText, stationsMeta);
             }
         } catch (_) {}
+        return [];
+    }
 
-        if (!records.length) {
-            records = await fetch('dane/snow_latest.json').then(r => r.ok ? r.json() : { stacje: [] }).then(d => d.stacje || []).catch(() => []);
-        }
+    async function fetchFallbackSnowRecords() {
+        return fetch('dane/snow_latest.json')
+            .then(r => r.ok ? r.json() : { stacje: [] })
+            .then(d => d.stacje || [])
+            .catch(() => []);
+    }
+
+    async function fetchSnowRecords() {
+        const now = Date.now();
+        if (_snowCache && (now - _snowCacheTime < CACHE_TTL)) return _snowCache;
+
+        const stationsMeta = await fetch('dane/snow_stations.json').then(r => r.ok ? r.json() : []).catch(() => []);
+        let records = await fetchPdfSnowRecords(stationsMeta);
+        if (!records.length) records = await fetchFallbackSnowRecords();
 
         if (records?.length > 0) {
             _snowCache = records;

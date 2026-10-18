@@ -25,6 +25,12 @@ export function getMinDistKm(lat, lon, stationLats, stationLons) {
     return minDist;
 }
 
+function isTargetAsosStation(d) {
+    const lat = parseFloat(d.lat), lon = parseFloat(d.lon);
+    if (isNaN(lat) || isNaN(lon) || (d.station || '').startsWith('EP')) return false;
+    return lat >= 48.0 && lat <= 56.5 && lon >= 11.5 && lon <= 26.5;
+}
+
 export async function fetchForeignASOSData() {
     const now = Date.now();
     if (foreignAsosCache && (now - foreignAsosCacheTime < 120000)) return foreignAsosCache;
@@ -41,18 +47,7 @@ export async function fetchForeignASOSData() {
         const results = await Promise.all(fetchPromises);
         clearTimeout(timeoutId);
 
-        const stations = [];
-        for (const res of results) {
-            if (!Array.isArray(res?.data)) continue;
-            for (const d of res.data) {
-                const lat = parseFloat(d.lat);
-                const lon = parseFloat(d.lon);
-                const sid = d.station || '';
-                if (!isNaN(lat) && !isNaN(lon) && lat >= 48.0 && lat <= 56.5 && lon >= 11.5 && lon <= 26.5 && !sid.startsWith('EP')) {
-                    stations.push(d);
-                }
-            }
-        }
+        const stations = results.flatMap(res => Array.isArray(res?.data) ? res.data.filter(isTargetAsosStation) : []);
         foreignAsosCache = stations;
         foreignAsosCacheTime = now;
         return stations;
@@ -66,18 +61,16 @@ export async function fetchIconModelData() {
     const now = Date.now();
     if (iconModelCache && (now - iconModelCacheTime < 180000)) return iconModelCache;
 
+    const buildUrl = coords => {
+        const lats = coords.map(s => s.lat.toFixed(2)).join(',');
+        const lons = coords.map(s => s.lon.toFixed(2)).join(',');
+        return `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,dew_point_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,snow_depth,snowfall,soil_temperature_6cm&models=icon_seamless`;
+    };
+
     try {
-        const plLats = PL_ICON_FILL_COORDS.map(s => s.lat.toFixed(2)).join(',');
-        const plLons = PL_ICON_FILL_COORDS.map(s => s.lon.toFixed(2)).join(',');
-        const plUrl = `https://api.open-meteo.com/v1/forecast?latitude=${plLats}&longitude=${plLons}&current=temperature_2m,relative_humidity_2m,dew_point_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,snow_depth,snowfall,soil_temperature_6cm&models=icon_seamless`;
-
-        const fLats = FOREIGN_STATIONS.map(s => s.lat.toFixed(2)).join(',');
-        const fLons = FOREIGN_STATIONS.map(s => s.lon.toFixed(2)).join(',');
-        const fUrl = `https://api.open-meteo.com/v1/forecast?latitude=${fLats}&longitude=${fLons}&current=temperature_2m,relative_humidity_2m,dew_point_2m,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,snow_depth,snowfall,soil_temperature_6cm&models=icon_seamless`;
-
         const [resPL, resForeign] = await Promise.all([
-            fetch(plUrl).then(r => r.ok ? r.json() : []).catch(() => []),
-            fetch(fUrl).then(r => r.ok ? r.json() : []).catch(() => [])
+            fetch(buildUrl(PL_ICON_FILL_COORDS)).then(r => r.ok ? r.json() : []).catch(() => []),
+            fetch(buildUrl(FOREIGN_STATIONS)).then(r => r.ok ? r.json() : []).catch(() => [])
         ]);
 
         const combined = {
@@ -96,62 +89,73 @@ function appendPoint(ctx, z, pt, metric) {
     const { val, txt, hov, dir } = metric;
     if (val == null || isNaN(val)) return;
     const { dataObj, realCoords } = ctx;
-    dataObj[z].pt_lats.push(pt.lat);
-    dataObj[z].pt_lons.push(pt.lon);
-    dataObj[z].pt_vals.push(val);
-    dataObj[z].pt_dirs.push(dir ?? null);
+    dataObj[z].pt_lats.push(pt.lat); dataObj[z].pt_lons.push(pt.lon);
+    dataObj[z].pt_vals.push(val); dataObj[z].pt_dirs.push(dir ?? null);
     dataObj[z].pt_txts.push(txt);
     dataObj[z].pt_hov.push(`<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${pt.name}</b><span style="font-size:0.65rem; color:${pt.badgeColor}; border:1px solid ${pt.badgeBorder}; border-radius:3px; padding:1px 4px;">${pt.source}</span></div>${hov}`);
-    dataObj[z].pt_foreign.push(pt.isForeign);
-    dataObj[z].pt_types.push(pt.type);
+    dataObj[z].pt_foreign.push(pt.isForeign); dataObj[z].pt_types.push(pt.type);
     dataObj[z].pt_meta.push({ id: pt.id || '', nazwa: pt.name, zrodlo: pt.source, czas: pt.time || '' });
-    if (realCoords && realCoords[z]) {
-        realCoords[z].lats.push(pt.lat);
-        realCoords[z].lons.push(pt.lon);
+    if (realCoords?.[z]) {
+        realCoords[z].lats.push(pt.lat); realCoords[z].lons.push(pt.lon);
     }
 }
 
-function addAsosStationPoints(st, ctx, now) {
-    const lat = parseFloat(st.lat), lon = parseFloat(st.lon);
-    if (isNaN(lat) || isNaN(lon)) return;
-    const vStr = st.valid ? String(st.valid).trim() : '';
-    const vMs = vStr ? Date.parse(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z') : NaN;
-    if (!isNaN(vMs) && ((now - vMs) > 9000000 || (now - vMs) < -900000)) return;
+function isValidAsosTimestamp(validStr, now) {
+    if (!validStr) return true;
+    const vStr = String(validStr).trim();
+    const iso = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(vStr) ? vStr : vStr.replace(' ', 'T') + 'Z';
+    const vMs = Date.parse(iso);
+    if (isNaN(vMs)) return true;
+    const diff = now - vMs;
+    return diff <= 9000000 && diff >= -900000;
+}
 
-    const cc = (st.network || '').slice(0, 2);
-    const sName = `${st.name || st.station} [${cc}]`;
-    const timeStr = fmtPlTime(st.valid);
-    const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
-
+function calculateAsosMetrics(st) {
     const temp = st.tmpf != null ? Math.round(((st.tmpf - 32) * 5 / 9) * 10) / 10 : NaN;
     const dp = st.dwpf != null ? Math.round(((st.dwpf - 32) * 5 / 9) * 10) / 10 : NaN;
     const rh = st.relh != null ? Math.round(st.relh) : NaN;
     const pMsl = st.alti != null ? Math.round(st.alti * 33.8639 * 10) / 10 : NaN;
     const wSpd = st.sknt != null ? Math.round(st.sknt * 1.852) : NaN;
     const wGust = st.gust != null ? Math.round(st.gust * 1.852) : (!isNaN(wSpd) ? wSpd : NaN);
-    const wDir = st.drct != null ? st.drct : null;
     const lcl = (!isNaN(temp) && !isNaN(dp)) ? Math.round(125 * Math.max(0, temp - dp)) : NaN;
+    return { temp, dp, rh, pMsl, wSpd, wGust, lcl, wDir: st.drct ?? null };
+}
+
+function addAsosStationPoints(st, ctx, now) {
+    const lat = parseFloat(st.lat), lon = parseFloat(st.lon);
+    if (isNaN(lat) || isNaN(lon) || !isValidAsosTimestamp(st.valid, now)) return;
+
+    const sName = `${st.name || st.station} [${(st.network || '').slice(0, 2)}]`;
+    const timeStr = fmtPlTime(st.valid);
+    const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
+    const m = calculateAsosMetrics(st);
 
     const pt = { lat, lon, name: sName, source: 'ASOS', isForeign: true, type: 'ODCZYT', id: st.station || '', time: st.valid || '', badgeColor: '#10b981', badgeBorder: 'rgba(16,185,129,0.3)' };
 
     const metrics = [
-        { z: 'temp', val: temp, txt: `${temp?.toFixed(1)}°`, hov: `T2m: <b>${temp?.toFixed(1)}°C</b>${timeLabel}` },
-        { z: 'cisnienie', val: pMsl, txt: pMsl?.toFixed(1), hov: `QFF: <b>${pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
-        { z: 'wilg', val: rh, txt: `${rh?.toFixed(0)}%`, hov: `RH: <b>${rh?.toFixed(0)}%</b>${timeLabel}` },
-        { z: 'rosy', val: dp, txt: `${dp?.toFixed(1)}°`, hov: `Td: <b>${dp?.toFixed(1)}°C</b>${timeLabel}` },
-        { z: 'lcl', val: lcl, txt: `${lcl}m`, hov: `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}` },
-        { z: 'wiatr', val: wGust, txt: wGust?.toFixed(0), hov: `Maks. Wiatr: <b>${wGust?.toFixed(0)} km/h</b>${timeLabel}`, dir: wDir },
-        { z: 'wiatr_sr', val: wSpd, txt: wSpd?.toFixed(0), hov: `Śr. Wiatr: <b>${wSpd?.toFixed(0)} km/h</b>${timeLabel}`, dir: wDir }
+        { z: 'temp', val: m.temp, txt: `${m.temp?.toFixed(1)}°`, hov: `T2m: <b>${m.temp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'cisnienie', val: m.pMsl, txt: m.pMsl?.toFixed(1), hov: `QFF: <b>${m.pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
+        { z: 'wilg', val: m.rh, txt: `${m.rh?.toFixed(0)}%`, hov: `RH: <b>${m.rh?.toFixed(0)}%</b>${timeLabel}` },
+        { z: 'rosy', val: m.dp, txt: `${m.dp?.toFixed(1)}°`, hov: `Td: <b>${m.dp?.toFixed(1)}°C</b>${timeLabel}` },
+        { z: 'lcl', val: m.lcl, txt: `${m.lcl}m`, hov: `LCL: <b>${m.lcl} m n.p.g.</b>${timeLabel}` },
+        { z: 'wiatr', val: m.wGust, txt: m.wGust?.toFixed(0), hov: `Maks. Wiatr: <b>${m.wGust?.toFixed(0)} km/h</b>${timeLabel}`, dir: m.wDir },
+        { z: 'wiatr_sr', val: m.wSpd, txt: m.wSpd?.toFixed(0), hov: `Śr. Wiatr: <b>${m.wSpd?.toFixed(0)} km/h</b>${timeLabel}`, dir: m.wDir }
     ];
 
-    for (const m of metrics) appendPoint(ctx, m.z, pt, m);
+    for (const item of metrics) appendPoint(ctx, item.z, pt, item);
 }
 
 export function parseASOSData(asosData, dataObj, realCoords) {
     if (!Array.isArray(asosData) || !asosData.length) return;
-    const now = Date.now();
-    const ctx = { dataObj, realCoords };
+    const now = Date.now(), ctx = { dataObj, realCoords };
     for (const st of asosData) addAsosStationPoints(st, ctx, now);
+}
+
+function canAddIconPoint(ctx, z, isHybrid, lat, lon) {
+    if (!isHybrid) return true;
+    const coords = ctx.realCoords?.[z];
+    if (!coords?.lats?.length) return true;
+    return getMinDistKm(lat, lon, coords.lats, coords.lons) >= 22.0;
 }
 
 function addIconPoint(item, ctx, isHybrid, isForeign) {
@@ -167,7 +171,6 @@ function addIconPoint(item, ctx, isHybrid, isForeign) {
     const timeLabel = timeStr ? ` <span style="font-size:0.75rem; color:#a1a1aa;">(${timeStr})</span>` : '';
 
     const pt = { lat, lon, name: sName, source: 'ICON', isForeign, type: 'PROGNOZA', id: '', time: cur.time || '', badgeColor: '#60a5fa', badgeBorder: 'rgba(96,165,250,0.3)' };
-    const canAdd = z => !isHybrid || !ctx.realCoords?.[z]?.lats?.length || getMinDistKm(lat, lon, ctx.realCoords[z].lats, ctx.realCoords[z].lons) >= 22.0;
 
     const metrics = [
         { z: 'temp', val: temp, txt: `${temp?.toFixed(1)}°`, hov: `T2m: <b>${temp?.toFixed(1)}°C</b>${timeLabel}` },
@@ -181,18 +184,14 @@ function addIconPoint(item, ctx, isHybrid, isForeign) {
     ];
 
     for (const m of metrics) {
-        if (canAdd(m.z)) appendPoint(ctx, m.z, pt, m);
+        if (canAddIconPoint(ctx, m.z, isHybrid, lat, lon)) appendPoint(ctx, m.z, pt, m);
     }
 }
 
 export function parseModelData(modelData, dataObj, realCoords, isHybrid) {
     if (!modelData) return;
     const ctx = { dataObj, realCoords };
-    if (Array.isArray(modelData.pl)) {
-        for (const item of modelData.pl) addIconPoint(item, ctx, isHybrid, false);
-    }
-    if (Array.isArray(modelData.foreign)) {
-        for (const item of modelData.foreign) addIconPoint(item, ctx, isHybrid, true);
-    }
+    if (Array.isArray(modelData.pl)) modelData.pl.forEach(item => addIconPoint(item, ctx, isHybrid, false));
+    if (Array.isArray(modelData.foreign)) modelData.foreign.forEach(item => addIconPoint(item, ctx, isHybrid, true));
 }
 
