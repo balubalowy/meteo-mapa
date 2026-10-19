@@ -75,10 +75,15 @@
         const rows = [];
         const unit = PARAM_UNITS[paramKey] || '';
         const scope = resolveScope(pData);
+        const allowForeign = document.getElementById('chk-foreign')?.checked ?? false;
+        const allowModel = document.getElementById('chk-source-model')?.checked ?? false;
 
         for (let i = 0; i < pData.pt_lats.length; i++) {
-            const meta = pData.pt_meta?.[i] || {};
             const isModel = pData.pt_types?.[i] === 'PROGNOZA', isForeign = Boolean(pData.pt_foreign?.[i]);
+            if (!allowForeign && isForeign) continue;
+            if (!allowModel && isModel) continue;
+
+            const meta = pData.pt_meta?.[i] || {};
             const typ = isModel ? 'MODEL' : (meta.typ || 'ODCZYT');
             const zrodlo = resolvePointSource(meta, isModel, isForeign);
             const val = pData.pt_vals[i], dir = pData.pt_dirs?.[i];
