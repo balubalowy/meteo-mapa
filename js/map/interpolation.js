@@ -145,30 +145,42 @@ function clipRasterToPoland(offCanvas, w, h, minLon, maxLon, minMercY, maxMercY)
     return mainCanvas.toDataURL();
 }
 
-export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, stepVal, unit, bounds, clipToPoland) {
+function prepareIdwPoints(lats, lons, vals, bounds) {
     const minLat = bounds?.minLat ?? 48.5, maxLat = bounds?.maxLat ?? 55.5;
     const minLon = bounds?.minLon ?? 13.5, maxLon = bounds?.maxLon ?? 24.5;
     const minMercY = latToMercY(minLat), maxMercY = latToMercY(maxLat);
     const gw = bounds ? 280 : 240, gh = bounds ? 190 : 170, w = 1200, h = 900;
-
     const midLatRad = ((minLat + maxLat) * 0.5) * (Math.PI / 180.0);
     const kx = ((maxLon - minLon) * 111.32 * Math.cos(midLatRad)) / gw;
     const ky = ((maxLat - minLat) * 111.13) / gh;
-
     const pts = lats.map((lat, i) => ({
         x: ((lons[i] - minLon) / (maxLon - minLon)) * gw,
         y: (1 - (latToMercY(lat) - minMercY) / (maxMercY - minMercY)) * gh,
         v: vals[i]
     }));
+    return { minLon, maxLon, minMercY, maxMercY, gw, gh, w, h, kx, ky, pts };
+}
 
-    const { valGrid, heatCanvas } = computeIdwRaster(pts, gw, gh, kx, ky, scale, cmin, cmax);
+export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, stepVal, unit, bounds, clipToPoland) {
+    const d = prepareIdwPoints(lats, lons, vals, bounds);
+    const { valGrid, heatCanvas } = computeIdwRaster(d.pts, d.gw, d.gh, d.kx, d.ky, scale, cmin, cmax);
     const offCanvas = document.createElement('canvas');
-    offCanvas.width = w; offCanvas.height = h;
+    offCanvas.width = d.w; offCanvas.height = d.h;
     const offCtx = offCanvas.getContext('2d');
     offCtx.imageSmoothingQuality = 'high';
-    offCtx.drawImage(heatCanvas, 0, 0, w, h);
-
-    if (drawIso) drawIsolines(offCtx, valGrid, { gw, gh, w, h }, { cmin, cmax, stepVal, unit });
+    offCtx.drawImage(heatCanvas, 0, 0, d.w, d.h);
+    if (drawIso) drawIsolines(offCtx, valGrid, { gw: d.gw, gh: d.gh, w: d.w, h: d.h }, { cmin, cmax, stepVal, unit });
     if (!clipToPoland) return offCanvas.toDataURL();
-    return clipRasterToPoland(offCanvas, w, h, minLon, maxLon, minMercY, maxMercY);
+    return clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY);
+}
+
+export function generateIsobarsOverlay(lats, lons, vals, bounds, clipToPoland, stepVal = 2.0) {
+    const d = prepareIdwPoints(lats, lons, vals, bounds);
+    const { valGrid } = computeIdwRaster(d.pts, d.gw, d.gh, d.kx, d.ky, COLORSCALES.pressure, 980, 1040);
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = d.w; offCanvas.height = d.h;
+    const offCtx = offCanvas.getContext('2d');
+    drawIsolines(offCtx, valGrid, { gw: d.gw, gh: d.gh, w: d.w, h: d.h }, { cmin: 980, cmax: 1040, stepVal, unit: 'hPa' });
+    if (!clipToPoland) return offCanvas.toDataURL();
+    return clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY);
 }

@@ -1,7 +1,7 @@
 // js/map/renderer.js
 // Renderowanie stacji, etykiet, wektorów wiatru oraz nakładki interpolacji IDW
 
-import { DEFAULT_ZMIENNE, generateIDWImage, getColorRGBA } from './interpolation.js';
+import { DEFAULT_ZMIENNE, generateIDWImage, generateIsobarsOverlay, getColorRGBA } from './interpolation.js';
 import { getIMGWLiveData } from './stations.js';
 import { updateDelayBadge } from './ui.js';
 
@@ -9,6 +9,7 @@ const ISO_STEPS = ['auto', 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 500, 1000];
 
 let imgwLayerGroup = null;
 let idwOverlay = null;
+let isobarsOverlay = null;
 
 export function updateIsoStepLabel(sliderVal) {
     const idx = parseInt(sliderVal, 10);
@@ -112,6 +113,22 @@ async function fetchParamData(okres, zmienna, loadingEl) {
     return null;
 }
 
+async function renderIsobarsOverlay(map, showForeign) {
+    try {
+        const live = await getIMGWLiveData('cisnienie');
+        const pData = live?.cisnienie;
+        if (!pData?.pt_lats?.length || pData.pt_lats.length < 5) return;
+        const pts = filterIdwPoints(pData, showForeign);
+        const hasForeign = showForeign && pData.pt_foreign?.some(Boolean);
+        const { geoBounds, layerBounds } = getIdwBounds(hasForeign);
+        const dataUrl = generateIsobarsOverlay(pts.lats, pts.lons, pts.vals, geoBounds, !hasForeign, 2.0);
+        isobarsOverlay = L.imageOverlay(dataUrl, layerBounds, { opacity: 0.95, pane: 'isobarsPane' }).addTo(map);
+        window.isobarsOverlay = isobarsOverlay;
+    } catch (err) {
+        console.error('Błąd izobar:', err);
+    }
+}
+
 export async function renderIMGW(map) {
     if (!imgwLayerGroup) imgwLayerGroup = L.layerGroup().addTo(map);
 
@@ -120,7 +137,8 @@ export async function renderIMGW(map) {
     const data = await fetchParamData(okres, zmienna, document.getElementById('imgw-loading'));
 
     imgwLayerGroup.clearLayers();
-    if (idwOverlay) { map.removeLayer(idwOverlay); idwOverlay = null; }
+    if (idwOverlay) { map.removeLayer(idwOverlay); idwOverlay = null; window.idwOverlay = null; }
+    if (isobarsOverlay) { map.removeLayer(isobarsOverlay); isobarsOverlay = null; window.isobarsOverlay = null; }
     if (!data?.pt_lats?.length) return;
 
     window.currentRenderedData = data;
@@ -133,6 +151,9 @@ export async function renderIMGW(map) {
         window.currentDisplayedTimeMs = data.latestTimeMs;
         window.currentDisplayedParamName = curParamName;
         updateDelayBadge(data.latestTimeMs, curParamName);
+    } else {
+        window.currentDisplayedTimeMs = 0;
+        updateDelayBadge(0, curParamName);
     }
 
     const showStations = window.MAP_LAYERS?.stations?.visible ?? true;
@@ -159,5 +180,9 @@ export async function renderIMGW(map) {
         const dataUrl = generateIDWImage(pts.lats, pts.lons, pts.vals, zInfo.cscale, zInfo.cmin, zInfo.cmax, showIso, stepVal, zInfo.unit, geoBounds, !hasForeign);
         idwOverlay = L.imageOverlay(dataUrl, layerBounds, { opacity: opacityBg, pane: 'weatherPane' }).addTo(map);
         window.idwOverlay = idwOverlay;
+    }
+
+    if (document.getElementById('chk-isobars')?.checked) {
+        await renderIsobarsOverlay(map, showForeign);
     }
 }

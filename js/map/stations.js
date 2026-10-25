@@ -69,7 +69,8 @@ function extractTelemetryMetrics(st, isRR) {
     const wSr = parseFloat(isRR ? st.predWiatru : st.wiatr_srednia_predkosc);
     const wPor = parseFloat(isRR ? (st.predWiatruMax10min ?? st.predWiatru) : (st.wiatr_poryw_10min ?? st.wiatr_predkosc_maksymalna));
     const dirStr = isRR ? st.kierWiatru : st.wiatr_kierunek;
-    const dir = typeof dirStr === 'string' ? COMPASS_TO_DEG[dirStr.trim().toUpperCase()] : parseFloat(dirStr);
+    const trimmedDir = typeof dirStr === 'string' ? dirStr.trim().toUpperCase() : '';
+    const dir = COMPASS_TO_DEG[trimmedDir] ?? (dirStr !== '' && !isNaN(dirStr) ? parseFloat(dirStr) : NaN);
     const tGrunt = parseFloat(isRR ? (st.tempGrunt ?? st.temperatura_gruntu) : st.temperatura_gruntu);
     const wSrVal = !isNaN(wSr) ? (isRR ? wSr : wSr * 3.6) : NaN;
     const wPorVal = !isNaN(wPor) ? (isRR ? wPor : wPor * 3.6) : NaN;
@@ -100,11 +101,11 @@ function parseTelemetryStation(st, isRR, ctx) {
 
     const metrics = [
         { z: 'temp', val: m.temp, txt: `${m.temp.toFixed(1)}°`, hov: `T2m: <b>${m.temp.toFixed(1)}°C</b>`, time: m.tDate },
-        { z: 'wilg', val: m.wilg, txt: `${m.wilg.toFixed(0)}%`, hov: `RH: <b>${m.wilg.toFixed(0)}%</b>`, time: m.rhDate },
+        { z: 'wilg', val: m.wilg, txt: `${m.wilg.toFixed(1)}%`, hov: `RH: <b>${m.wilg.toFixed(1)}%</b>`, time: m.rhDate },
         { z: 'rosy', val: m.dp, txt: `${m.dp?.toFixed(1)}°`, hov: `Td: <b>${m.dp?.toFixed(1)}°C</b>`, time: m.tDate },
         { z: 'lcl', val: m.lcl, txt: `${m.lcl}m`, hov: `LCL: <b>${m.lcl} m n.p.g.</b>`, time: m.tDate },
-        { z: 'wiatr_sr', val: m.wSrVal, txt: Math.round(m.wSrVal).toString(), hov: `Śr. Wiatr: <b>${Math.round(m.wSrVal)} km/h</b>`, dir: m.dir, time: m.wDate },
-        { z: 'wiatr', val: m.wPorVal, txt: Math.round(m.wPorVal).toString(), hov: `Maks. Wiatr: <b>${Math.round(m.wPorVal)} km/h</b>`, dir: m.dir, time: m.wPorDate },
+        { z: 'wiatr_sr', val: m.wSrVal, txt: m.wSrVal.toFixed(1), hov: `Śr. Wiatr: <b>${m.wSrVal.toFixed(1)} km/h</b>`, dir: m.dir, time: m.wDate },
+        { z: 'wiatr', val: m.wPorVal, txt: m.wPorVal.toFixed(1), hov: `Maks. Wiatr: <b>${m.wPorVal.toFixed(1)} km/h</b>`, dir: m.dir, time: m.wPorDate },
         { z: 'grunt', val: m.tGrunt, txt: `${m.tGrunt.toFixed(1)}°`, hov: `T grunt: <b>${m.tGrunt.toFixed(1)}°C</b>`, time: m.gDate }
     ];
 
@@ -114,6 +115,7 @@ function parseTelemetryStation(st, isRR, ctx) {
 function appendSnowData(snowData, dataObj) {
     if (!snowData) return;
     ['snieg', 'snieg_swiezy'].forEach(sp => {
+        if (snowData[sp]?.latestTimeMs) dataObj[sp].latestTimeMs = snowData[sp].latestTimeMs;
         snowData[sp]?.pt_lats?.forEach((sLat, idx) => {
             dataObj[sp].pt_lats.push(sLat);
             dataObj[sp].pt_lons.push(snowData[sp].pt_lons[idx]);

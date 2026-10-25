@@ -153,7 +153,7 @@
         const zapasTxt = r.zapas != null ? `${r.zapas} mm` : 'brak';
         const obcTxt = (r.obciazenie || 0).toFixed(3);
         const normaTxt = `${r.norma || '-'} kN/m² (${r.procent_normy || 0}% normy)`;
-        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${nazwa}</b> [${r.woj || ''}, ${alt} m n.p.m.]<span class="badge-odczyt">ODCZYT</span></div>Pokrywa śnieżna: <b>${(r.grubosc || 0).toFixed(0)} cm</b>${dateStr}<br>Świeży śnieg: <b>${swiezyVal.toFixed(0)} cm</b><br>Gatunek śniegu: <b>${r.gatunek_opis || '-'}</b><br>Zapas wody: <b>${zapasTxt}</b><br>Obciążenie: <b>${obcTxt} kN/m²</b><br>Norma: <b>${normaTxt}</b>`;
+        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${nazwa}</b> [${r.woj || ''}, ${alt} m n.p.m.]<span class="badge-odczyt">ODCZYT</span></div>Pokrywa śnieżna: <b>${(r.grubosc || 0).toFixed(1)} cm</b>${dateStr}<br>Świeży śnieg: <b>${swiezyVal.toFixed(1)} cm</b><br>Gatunek śniegu: <b>${r.gatunek_opis || '-'}</b><br>Zapas wody: <b>${zapasTxt}</b><br>Obciążenie: <b>${obcTxt} kN/m²</b><br>Norma: <b>${normaTxt}</b>`;
     }
 
     function appendSnowStationData(r, dataObj) {
@@ -177,8 +177,8 @@
             dataObj[p].pt_foreign.push(false); dataObj[p].pt_types.push('ODCZYT'); dataObj[p].pt_meta.push(metaItem);
         };
 
-        addPt('snieg', grubosc, `${grubosc.toFixed(0)}cm`);
-        addPt('snieg_swiezy', swiezyVal, `${swiezyVal.toFixed(0)}cm`);
+        addPt('snieg', grubosc, `${grubosc.toFixed(1)}cm`);
+        addPt('snieg_swiezy', swiezyVal, `${swiezyVal.toFixed(1)}cm`);
         if (zapas != null) addPt('snieg_zapas', zapas, `${zapas}mm`);
         addPt('snieg_obciazenie', obciazenie, obciazenie.toFixed(2));
         addPt('snieg_norma', proc, `${proc}%`);

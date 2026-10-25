@@ -135,11 +135,11 @@ function addAsosStationPoints(st, ctx, now) {
     const metrics = [
         { z: 'temp', val: m.temp, txt: `${m.temp?.toFixed(1)}°`, hov: `T2m: <b>${m.temp?.toFixed(1)}°C</b>${timeLabel}` },
         { z: 'cisnienie', val: m.pMsl, txt: m.pMsl?.toFixed(1), hov: `QFF: <b>${m.pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
-        { z: 'wilg', val: m.rh, txt: `${m.rh?.toFixed(0)}%`, hov: `RH: <b>${m.rh?.toFixed(0)}%</b>${timeLabel}` },
+        { z: 'wilg', val: m.rh, txt: `${m.rh?.toFixed(1)}%`, hov: `RH: <b>${m.rh?.toFixed(1)}%</b>${timeLabel}` },
         { z: 'rosy', val: m.dp, txt: `${m.dp?.toFixed(1)}°`, hov: `Td: <b>${m.dp?.toFixed(1)}°C</b>${timeLabel}` },
         { z: 'lcl', val: m.lcl, txt: `${m.lcl}m`, hov: `LCL: <b>${m.lcl} m n.p.g.</b>${timeLabel}` },
-        { z: 'wiatr', val: m.wGust, txt: m.wGust?.toFixed(0), hov: `Maks. Wiatr: <b>${m.wGust?.toFixed(0)} km/h</b>${timeLabel}`, dir: m.wDir },
-        { z: 'wiatr_sr', val: m.wSpd, txt: m.wSpd?.toFixed(0), hov: `Śr. Wiatr: <b>${m.wSpd?.toFixed(0)} km/h</b>${timeLabel}`, dir: m.wDir }
+        { z: 'wiatr', val: m.wGust, txt: m.wGust?.toFixed(1), hov: `Maks. Wiatr: <b>${m.wGust?.toFixed(1)} km/h</b>${timeLabel}`, dir: m.wDir },
+        { z: 'wiatr_sr', val: m.wSpd, txt: m.wSpd?.toFixed(1), hov: `Śr. Wiatr: <b>${m.wSpd?.toFixed(1)} km/h</b>${timeLabel}`, dir: m.wDir }
     ];
 
     for (const item of metrics) appendPoint(ctx, item.z, pt, item);
@@ -175,11 +175,11 @@ function addIconPoint(item, ctx, isHybrid, isForeign) {
     const metrics = [
         { z: 'temp', val: temp, txt: `${temp?.toFixed(1)}°`, hov: `T2m: <b>${temp?.toFixed(1)}°C</b>${timeLabel}` },
         { z: 'cisnienie', val: pMsl, txt: pMsl?.toFixed(1), hov: `QFF: <b>${pMsl?.toFixed(1)} hPa</b>${timeLabel}` },
-        { z: 'wilg', val: rh, txt: `${Math.round(rh || 0)}%`, hov: `RH: <b>${Math.round(rh || 0)}%</b>${timeLabel}` },
+        { z: 'wilg', val: rh, txt: `${rh?.toFixed(1)}%`, hov: `RH: <b>${rh?.toFixed(1)}%</b>${timeLabel}` },
         { z: 'rosy', val: dp, txt: `${dp?.toFixed(1)}°`, hov: `Td: <b>${dp?.toFixed(1)}°C</b>${timeLabel}` },
         { z: 'lcl', val: isNaN(lcl) ? null : lcl, txt: `${lcl}m`, hov: `LCL: <b>${lcl} m n.p.g.</b>${timeLabel}` },
-        { z: 'wiatr', val: wGust, txt: Math.round(wGust || 0).toString(), hov: `Maks. Wiatr: <b>${Math.round(wGust || 0)} km/h</b>${timeLabel}`, dir: wDir },
-        { z: 'wiatr_sr', val: wSpd, txt: Math.round(wSpd || 0).toString(), hov: `Śr. Wiatr: <b>${Math.round(wSpd || 0)} km/h</b>${timeLabel}`, dir: wDir },
+        { z: 'wiatr', val: wGust, txt: wGust?.toFixed(1), hov: `Maks. Wiatr: <b>${wGust?.toFixed(1)} km/h</b>${timeLabel}`, dir: wDir },
+        { z: 'wiatr_sr', val: wSpd, txt: wSpd?.toFixed(1), hov: `Śr. Wiatr: <b>${wSpd?.toFixed(1)} km/h</b>${timeLabel}`, dir: wDir },
         { z: 'grunt', val: tSoil, txt: `${tSoil?.toFixed(1)}°`, hov: `T grunt (6cm): <b>${tSoil?.toFixed(1)}°C</b>${timeLabel}` }
     ];
 

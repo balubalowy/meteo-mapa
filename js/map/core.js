@@ -28,6 +28,7 @@ export function setupPanes(map) {
         { name: 'basePane', zIndex: 200, pointerEvents: 'auto' },
         { name: 'satellitePane', zIndex: 260, pointerEvents: 'auto' },
         { name: 'weatherPane', zIndex: 290, pointerEvents: 'auto' },
+        { name: 'isobarsPane', zIndex: 305, pointerEvents: 'none' },
         { name: 'radarPane', zIndex: 320, pointerEvents: 'auto' },
         { name: 'lightningPane', zIndex: 350, pointerEvents: 'auto' },
         { name: 'drawingsPane', zIndex: 380, pointerEvents: 'auto' },
@@ -108,6 +109,7 @@ export function initMap(containerId = 'premium-map') {
     setupPanes(map);
     const basemaps = setupBaseLayers(map);
     const cityLabels = createCityLabelsGroup(map);
+    window.cityLabelsGroup = cityLabels.group;
 
     map.on('baselayerchange', (e) => {
         const nameLower = (e.name || '').toLowerCase();

@@ -93,3 +93,14 @@ export function initUIControls(map) {
         }
     }, 30000);
 }
+
+export function updateCitiesVisibility() {
+    const show = document.getElementById('chk-cities')?.checked ?? true;
+    if (!window.cityLabelsGroup || !window.premiumMap) return;
+    if (show && !window.premiumMap.hasLayer(window.cityLabelsGroup)) {
+        window.premiumMap.addLayer(window.cityLabelsGroup);
+    } else if (!show && window.premiumMap.hasLayer(window.cityLabelsGroup)) {
+        window.premiumMap.removeLayer(window.cityLabelsGroup);
+    }
+}
+window.updateCitiesVisibility = updateCitiesVisibility;
