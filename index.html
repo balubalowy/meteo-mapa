@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>B-Mapa</title>
-  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, LibreWXR, RainViewer, EUMETSAT.">
+  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, LibreWXR, EUMETSAT.">
   <link rel="icon" type="image/png" href="icons/icon-512.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
   
@@ -47,14 +47,8 @@
         <!-- SEKCJA: Radar -->
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">Radar</span>
+                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">Radar (LibreWXR)</span>
                 <span id="rv-forecast-badge" class="radar-nowcast-badge" style="display: none;">PROGNOZA</span>
-            </div>
-            <!-- Przełącznik źródła radaru -->
-            <div style="display: flex; gap: 4px; background: var(--bg-secondary); padding: 3px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; text-align: center;">IMGW</button>
-                <button id="radar-src-rv" class="btn btn-primary" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; font-weight: 600; text-align: center;">RainViewer</button>
-                <button id="radar-src-lwxr" class="btn btn-ghost" onclick="setRadarSource('lwxr')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; text-align: center;" title="LibreWXR: kompozyt OPERA + prognoza +60 min, ruch komórek, komórki burzowe i wyładowania">LibreWXR</button>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
@@ -66,7 +60,7 @@
             </div>
 
             <!-- Opcje radaru LibreWXR: paleta, wyładowania, wektory ruchu, komórki burzowe -->
-            <div id="lwxr-options" class="lwxr-options-box" style="display: none;">
+            <div id="lwxr-options" class="lwxr-options-box">
                 <div class="lwxr-select-grid">
                     <div>
                         <label for="lwxr-color" class="lwxr-field-lbl">Paleta radaru:</label>
@@ -241,11 +235,10 @@
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
                 Pełny wykaz źródeł meteorologicznych i geograficznych użytych na mapie:
                 <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem; display: flex; flex-direction: column; gap: 3px;">
-                    <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF), kompozyt radarowy POLRAD CMAX oraz biuletyn pokrywy śnieżnej.</li>
+                    <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF) oraz biuletyn pokrywy śnieżnej.</li>
                     <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
                     <li><b>DWD / Open-Meteo</b> (CC BY 4.0) - dane modelu numerycznego DWD ICON (icon_seamless) jako opcjonalne dopełnienie przestrzenne.</li>
                     <li><b>IEM ASOS (Iowa State University)</b> - zagraniczne stacje lotniskowe METAR/ASOS (CZ, SK, DE, LT, UA, BY).</li>
-                    <li><b>RainViewer</b> - kafelkowy kompozyt radarów meteorologicznych (archiwum opadów).</li>
                     <li><b>LibreWXR (CC BY 4.0) / EUMETNET OPERA</b> - europejski kompozyt radarowy, prognoza nowcasting (+60 min), wektory ruchu opadów, detekcja komórek burzowych oraz wyładowania.</li>
                     <li><b>EUMETSAT</b> - zobrazowania satelitarne WMS: tryb dzienny MSG FES RGB (msg_fes:rgb_eview) oraz nocny MTG-I1 FCI IR 10.5 µm (mtg_fd:ir105_hrfi).</li>
                     <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i rzeźba terenu.</li>

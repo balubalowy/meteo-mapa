@@ -111,11 +111,6 @@ function renderLayerControls(key) {
             <button class="btn ${!isDay ? 'btn-primary' : 'btn-ghost'}" onclick="window.setSatelliteMode('night')" style="padding:1px 5px; font-size:0.65rem;">Noc</button>
         </div>`;
     }
-    if (key === 'radar') {
-        const src = window.getRadarSource?.() || 'rv';
-        const mk = (id, lbl) => `<button class="btn ${src === id ? 'btn-primary' : 'btn-ghost'}" onclick="window.setRadarSource('${id}')" style="padding:1px 4px; font-size:0.62rem;">${lbl}</button>`;
-        return `<div style="display:inline-flex; gap:2px; margin-left:auto; margin-right:6px;">${mk('imgw', 'IMGW')}${mk('rv', 'RV')}${mk('lwxr', 'LWXR')}</div>`;
-    }
     return '';
 }
 
