@@ -31,7 +31,7 @@
     function determineDateRange(pData, typDanych, horyzont) {
         const dtDo = pData?.czas_do_utc ? new Date(pData.czas_do_utc) : new Date(pData?.latestTimeMs || Date.now());
         if (pData?.czas_od_utc) return { dtOd: new Date(pData.czas_od_utc), dtDo };
-        const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 5;
+        const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 6;
         const dtOd = typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - hrs * 3600000);
         return { dtOd, dtDo };
     }
@@ -49,7 +49,7 @@
             return { opis: `Aktualne: ${dataStr}, ${timeDo} (${formatHmUtc(dtDo)} UTC)`, fileTag: `aktualne_${ymd}T${hmDo}Z` };
         }
         if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
-            const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 5;
+            const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 6;
             const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
             const tag = `${typDanych === 'MINIMUM' ? 'min' : 'max'}${hrs}h`;
             return { opis: `${lbl} (${hrs}h): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
@@ -116,12 +116,12 @@
         const data = arguments.length > 0 ? dataOverride : window.currentRenderedData;
         if (!data?.pt_lats?.length) {
             el.textContent = 'Brak danych do eksportu';
-            el.style.color = 'var(--text-muted, #94a3b8)';
+            el.style.color = '#777777';
             return;
         }
         const scope = resolveScope(data);
         el.textContent = scope.opis;
-        el.style.color = 'var(--text-secondary, #cbd5e1)';
+        el.style.color = '#999999';
     };
 
     function showStatus(btn, text, isError = false) {

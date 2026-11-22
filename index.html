@@ -7,234 +7,209 @@
   <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, LibreWXR, EUMETSAT.">
   <link rel="icon" type="image/png" href="icons/icon-512.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
-  
+
   <!-- CSS Dependencies -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
   <link rel="stylesheet" href="css/bcore.css">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/map.css">
-  
+  <link rel="stylesheet" href="css/sidebar.css">
+
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
 <div class="map-dashboard-container">
-    
-    <!-- PANEL BOCZNY (SIDEBAR) -->
-    <div id="map-sidebar" class="map-sidebar">
-        
-        <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <h2 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">B-Mapa</h2>
-                <span id="map-delay-badge" style="display: inline-flex; align-items: center; font-size: 0.72rem; padding: 2px 7px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: var(--text-secondary); font-weight: 600;" title="Oczekiwanie na dane...">-- min</span>
+
+    <!-- PANEL BOCZNY (SIDEBAR - STYL MONOCHROMATYCZNY) -->
+    <aside id="map-sidebar" class="map-sidebar">
+
+        <header class="sb-header">
+            <div class="sb-brand">
+                <h2>B-Mapa</h2>
+                <span id="map-delay-badge" class="sb-delay" title="Oczekiwanie na dane...">-- min</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <button id="auth-login-btn" class="btn btn-ghost" style="padding: 3px 8px; font-size: 0.72rem; border: 1px solid var(--border-subtle); border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="Zaloguj (Google) aby odblokować bazę RTDB i trendy">
-                    <i data-lucide="log-in" style="width: 13px; height: 13px;"></i> Zaloguj
+            <div class="sb-auth">
+                <button id="auth-login-btn" type="button" class="sb-plain-btn" title="Zaloguj (Google) aby odblokować bazę RTDB i trendy">
+                    <i data-lucide="log-in" style="width: 12px; height: 12px;"></i> Zaloguj
                 </button>
-                <div id="auth-user-badge" style="display: none; align-items: center; gap: 4px;">
-                    <span id="auth-user-email" style="font-size: 0.7rem; color: var(--accent-primary); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                    <button id="auth-logout-btn" class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.7rem;" title="Wyloguj"><i data-lucide="log-out" style="width: 13px; height: 13px;"></i></button>
+                <div id="auth-user-badge" class="sb-user-badge">
+                    <span id="auth-user-email" class="sb-user-email"></span>
+                    <button id="auth-logout-btn" type="button" class="sb-plain-btn" style="padding: 3px 5px;" title="Wyloguj" aria-label="Wyloguj">
+                        <i data-lucide="log-out" style="width: 12px; height: 12px;"></i>
+                    </button>
                 </div>
-                <button class="btn btn-ghost mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 8px;" title="Zamknij panel" aria-label="Zamknij panel">
-                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                <button type="button" class="sb-plain-btn mobile-close-sidebar-btn" onclick="window.toggleMapSidebar()" style="padding: 4px 6px;" title="Zamknij panel" aria-label="Zamknij panel">
+                    <i data-lucide="x" style="width: 16px; height: 16px;"></i>
                 </button>
             </div>
-        </div>
+        </header>
 
-        <!-- SEKCJA: Radar -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">Radar (LibreWXR)</span>
-                <span id="rv-forecast-badge" class="radar-nowcast-badge" style="display: none;">PROGNOZA</span>
+        <!-- SEKCJA: Radar LibreWXR -->
+        <section class="sb-sec">
+            <div class="sb-sec-h">
+                <label class="sb-chk-title">
+                    <input type="checkbox" id="chk-radar-quick" onchange="window.toggleLayer && window.toggleLayer('radar', this.checked)">
+                    Radar LibreWXR
+                </label>
+                <span id="rv-forecast-badge" class="sb-fcst-tag">PROGNOZA</span>
             </div>
 
-            <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                <button id="rv-play-btn" class="btn btn-ghost" aria-label="Odtwórz lub zatrzymaj animację radaru" style="padding: 5px; border-radius: 50%; color: var(--accent-primary);">
-                    <i data-lucide="play"></i>
-                </button>
-                <span id="rv-time" style="font-family: monospace; font-size: 0.9rem; font-weight: bold; width: 50px; text-align: center;">--:--</span>
-                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10" style="flex: 1;">
-            </div>
-
-            <!-- Opcje radaru LibreWXR: paleta, wyładowania, wektory ruchu, komórki burzowe -->
-            <div id="lwxr-options" class="lwxr-options-box">
-                <div class="lwxr-select-grid">
-                    <div>
-                        <label for="lwxr-color" class="lwxr-field-lbl">Paleta radaru:</label>
-                        <select id="lwxr-color" class="form-select" aria-label="Paleta kolorów radaru LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()" style="padding: 3px 6px; font-size: 0.74rem;">
-                            <option value="10" selected>10: Viper HD</option>
-                            <option value="14">14: Windy</option>
-                            <option value="2">2: Universal Blue</option>
-                            <option value="3">3: Titan</option>
-                            <option value="11">11: MRMS CREF</option>
-                            <option value="7">7: Rainbow</option>
-                            <option value="1">1: Rainviewer Original</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="lwxr-lightning" class="lwxr-field-lbl">Wyładowania:</label>
-                        <select id="lwxr-lightning" class="form-select" aria-label="Warstwa wyładowań LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()" style="padding: 3px 6px; font-size: 0.74rem;">
-                            <option value="" selected>Wyłączone</option>
-                            <option value="dots">Kropki (dots)</option>
-                            <option value="bolts">Błyskawice (bolts)</option>
-                        </select>
-                    </div>
+            <div id="radar-controls-body">
+                <div class="sb-player">
+                    <button id="rv-play-btn" type="button" class="sb-play-btn" aria-label="Odtwórz lub zatrzymaj animację radaru">
+                        <i data-lucide="play"></i>
+                    </button>
+                    <span id="rv-time" class="sb-time">--:--</span>
+                    <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10">
                 </div>
-                <div class="lwxr-checks">
+
+                <div class="sb-checks">
                     <label title="Wektory kierunku i prędkości przemieszczania komórek opadowych"><input type="checkbox" id="lwxr-arrows" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Ruch komórek</label>
                     <label title="Detekcja i oznaczanie komórek burzowych"><input type="checkbox" id="lwxr-cells" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Komórki burzowe</label>
                     <label title="Rozróżnienie opadów śniegu i deszczu"><input type="checkbox" id="lwxr-snow" checked onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Śnieg / deszcz</label>
+                    <label title="Wyładowania atmosferyczne na warstwie radarowej"><input type="checkbox" id="lwxr-lightning-quick" onchange="window.toggleQuickLightning && window.toggleQuickLightning(this.checked)"> Wyładowania</label>
                 </div>
-            </div>
-            <div id="radar-status-msg" class="radar-status-msg" style="display: none;"></div>
-        </div>
 
-        <!-- SEKCJA: IMGW -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">
-                Stacje i pomiary
+                <details class="sb-details">
+                    <summary>Paleta i wyładowania</summary>
+                    <div class="sb-details-grid">
+                        <div>
+                            <label for="lwxr-color" class="sb-lbl">Paleta radaru</label>
+                            <select id="lwxr-color" class="sb-select" aria-label="Paleta kolorów radaru LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
+                                <option value="10" selected>10: Viper HD</option>
+                                <option value="14">14: Windy</option>
+                                <option value="2">2: Universal Blue</option>
+                                <option value="3">3: Titan</option>
+                                <option value="11">11: MRMS CREF</option>
+                                <option value="7">7: Rainbow</option>
+                                <option value="1">1: Rainviewer Original</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="lwxr-lightning" class="sb-lbl">Tryb wyładowań</label>
+                            <select id="lwxr-lightning" class="sb-select" aria-label="Tryb wyładowań LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
+                                <option value="" selected>Wyłączone</option>
+                                <option value="dots">Kropki (dots)</option>
+                                <option value="bolts">Błyskawice (bolts)</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; flex-direction: column; gap: 6px; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">STACJE:</span>
-                        <div style="display: flex; gap: 4px;">
-                            <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Oficjalne stacje IMGW (odczyty godzinowe)">
-                                <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
-                                IMGW
-                            </label>
-                            <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Rafał Raczyński (odczyty 10-minutowe)">
-                                <input type="radio" name="station-provider" id="provider-rr" value="rr" onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
-                                R.R. (10m)
-                            </label>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 5px;">
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">Dopełnienie ICON:</span>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.7rem; color: var(--text-secondary);">MODEL</span>
-                            <label class="toggle-switch" style="margin: 0;" title="Przełącznik: same stacje / stacje + model DWD ICON">
-                                <input type="checkbox" id="chk-source-model" onchange="renderIMGW()">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
+            <div id="radar-status-msg" class="sb-status" style="display: none;"></div>
+        </section>
+
+        <!-- SEKCJA: Parametr, stacje i horyzont RTDB -->
+        <section class="sb-sec">
+            <div class="sb-sec-h">
+                <span>Parametr</span>
+                <div class="sb-seg sb-seg-compact" role="group" aria-label="Dostawca danych ze stacji">
+                    <button type="button" id="btn-prov-imgw" class="is-active" onclick="window.setStationProvider && window.setStationProvider('imgw')" title="Oficjalne stacje IMGW (odczyty godzinowe)">IMGW</button>
+                    <button type="button" id="btn-prov-rr" onclick="window.setStationProvider && window.setStationProvider('rr')" title="Rafał Raczyński (odczyty 10-minutowe)">R.R. 10m</button>
                 </div>
+                <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked hidden>
+                <input type="radio" name="station-provider" id="provider-rr" value="rr" hidden>
+            </div>
+
+            <input type="hidden" id="imgw-zmienna" value="temp">
+            <div class="sb-param-grid" role="group" aria-label="Wybór parametru meteorologicznego">
+                <button type="button" class="sb-param-btn is-active" data-param="temp" onclick="window.selectMapParam && window.selectMapParam('temp')">Temperatura</button>
+                <button type="button" class="sb-param-btn" data-param="grunt" onclick="window.selectMapParam && window.selectMapParam('grunt')">Temp. gruntu</button>
+                <button type="button" class="sb-param-btn" data-param="rosy" onclick="window.selectMapParam && window.selectMapParam('rosy')">Punkt rosy</button>
+                <button type="button" class="sb-param-btn" data-param="wilg" onclick="window.selectMapParam && window.selectMapParam('wilg')">Wilgotność</button>
+                <button type="button" class="sb-param-btn" data-param="wiatr_sr" onclick="window.selectMapParam && window.selectMapParam('wiatr_sr')">Wiatr średni</button>
+                <button type="button" class="sb-param-btn" data-param="wiatr" onclick="window.selectMapParam && window.selectMapParam('wiatr')">Porywy wiatru</button>
+                <button type="button" class="sb-param-btn" data-param="cisnienie" onclick="window.selectMapParam && window.selectMapParam('cisnienie')">Ciśnienie QFF</button>
+                <button type="button" class="sb-param-btn" data-param="snieg" onclick="window.selectMapParam && window.selectMapParam('snieg')">Śnieg (cm)</button>
+                <button type="button" class="sb-param-btn" data-param="snieg_swiezy" onclick="window.selectMapParam && window.selectMapParam('snieg_swiezy')">Świeży śnieg</button>
+                <button type="button" class="sb-param-btn" data-param="lcl" onclick="window.selectMapParam && window.selectMapParam('lcl')">LCL (m)</button>
+            </div>
+
+            <div class="sb-two-col">
                 <div>
-                    <label style="font-size: 0.75rem; color: var(--text-secondary);">Parametr:</label>
-                    <select id="imgw-zmienna" class="form-select" aria-label="Wybór parametru meteorologicznego IMGW" onchange="renderIMGW()" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
-                        <option value="temp">Temperatura (°C)</option>
-                        <option value="grunt">Temperatura Gruntu (°C)</option>
-                        <option value="rosy">Punkt Rosy (°C)</option>
-                        <option value="wilg">Wilgotność (%)</option>
-                        <option value="lcl">LCL (m)</option>
-                        <option value="wiatr_sr">Prędkość Wiatru (km/h)</option>
-                        <option value="wiatr">Porywy Wiatru (km/h)</option>
-                        <option value="cisnienie">Ciśnienie QFF (hPa)</option>
-                        <option value="snieg">Pokrywa Śnieżna (cm)</option>
-                        <option value="snieg_swiezy">Świeży Śnieg (cm)</option>
-                    </select>
-                </div>
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Horyzont:</label>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span id="rtdb-status-badge" style="font-size: 0.7rem; color: var(--text-muted);" title="Dostęp do bazy danych IMGW z historią wymaga logowania">Tylko dla zalogowanych</span>
-                            <label class="toggle-switch" style="margin: 0;" title="Włącz / wyłącz połączenie z bazą RTDB (wymaga logowania)">
-                                <input type="checkbox" id="chk-db-connect" onchange="window.toggleDatabaseConnection && window.toggleDatabaseConnection(this.checked)" disabled>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
+                    <div class="sb-lbl-row">
+                        <label for="imgw-okres" class="sb-lbl">Horyzont</label>
+                        <label class="sb-rtdb-ctl" title="Włącz / wyłącz połączenie z bazą RTDB (wymaga logowania)">
+                            <input type="checkbox" id="chk-db-connect" onchange="window.toggleDatabaseConnection && window.toggleDatabaseConnection(this.checked)" disabled>
+                            <span id="rtdb-status-badge">Brak log.</span>
+                        </label>
                     </div>
-                    <select id="imgw-okres" class="form-select" aria-label="Horyzont czasowy obserwacji IMGW" onchange="window.renderIMGW && window.renderIMGW()" style="padding: 4px 8px; font-size: 0.85rem; width: 100%;">
+                    <select id="imgw-okres" class="sb-select" aria-label="Horyzont czasowy obserwacji IMGW" onchange="window.renderIMGW && window.renderIMGW()">
                         <option value="now" selected>Teraz</option>
                         <option value="trend1h" disabled title="Wymaga logowania kontem Google">Trend 1h</option>
                         <option value="trend2h" disabled title="Wymaga logowania kontem Google">Trend 2h</option>
                         <option value="trend3h" disabled title="Wymaga logowania kontem Google">Trend 3h</option>
-                        <option value="trend5h" disabled title="Wymaga logowania kontem Google">Trend 5h</option>
-                        <option value="trend12h" disabled title="Wymaga logowania kontem Google">Trend 12h</option>
-                        <option value="max5" disabled title="Wymaga logowania kontem Google">Maks. 5h</option>
-                        <option value="min5" disabled title="Wymaga logowania kontem Google">Min. 5h</option>
-                        <option value="max12" disabled title="Wymaga logowania kontem Google">Maks. 12h</option>
+                        <option value="min6" disabled title="Wymaga logowania kontem Google">Min. 6h</option>
                         <option value="min12" disabled title="Wymaga logowania kontem Google">Min. 12h</option>
+                        <option value="max6" disabled title="Wymaga logowania kontem Google">Maks. 6h</option>
+                        <option value="max12" disabled title="Wymaga logowania kontem Google">Maks. 12h</option>
                     </select>
                 </div>
-                
-                <!-- Szczegóły Wyświetlania IMGW -->
-                <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-top: 5px;">
-                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 5px; display: block;">Elementy mapy:</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem;">
-                        <label title="Izolinie wybranej zmiennej"><input type="checkbox" id="chk-iso" onchange="renderIMGW()"> Izolinie</label>
-                        <label title="Niezależne izobary ciśnienia (QFF co 2 hPa)"><input type="checkbox" id="chk-isobars" onchange="renderIMGW()"> Izobary</label>
-                        <label title="Etykiety miejscowości nad warstwą interpolacji"><input type="checkbox" id="chk-cities" onchange="window.updateCitiesVisibility && window.updateCitiesVisibility()" checked> Miasta</label>
-                        <label title="Granice państw i województw"><input type="checkbox" id="chk-boundaries" onchange="window.updateBoundariesVisibility && window.updateBoundariesVisibility()" checked> Granice</label>
-                        <label title="Punkty lokalizacji stacji pomiarowych"><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
-                        <label title="Wartości pomiarowe przy stacjach"><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
-                        <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
-                    </div>
-                    <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Styl wartości:</span>
-                        <div style="display: flex; gap: 4px; background: var(--bg-primary); padding: 2px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                            <button type="button" id="val-style-pill" class="btn btn-primary" onclick="window.setValueStyle && window.setValueStyle('pill')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kapsułka w kolorze skali z auto-kontrastem">Kapsułka</button>
-                            <button type="button" id="val-style-halo" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('halo')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Rozjaśniona kolorowa cyfra z ostrym obrysem">Kolor</button>
-                            <button type="button" id="val-style-white" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('white')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Klasyczne białe wartości z ostrym obrysem">Białe</button>
-                        </div>
-                    </div>
-                    <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Krok izolinii:</label>
-                            <span id="iso-step-val" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-primary);">Auto</span>
-                        </div>
-                        <input type="range" id="iso-step" min="0" max="12" value="0" step="1" aria-label="Krok izolinii interpolacji IDW" oninput="window.updateIsoStepLabel(this.value)" onchange="window.renderIMGW()" style="width: 100%; accent-color: var(--accent-primary); cursor: pointer; margin: 2px 0;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); padding: 0 2px;">
-                            <span>Auto</span>
-                            <span>10</span>
-                            <span>50</span>
-                            <span>200</span>
-                            <span>1000</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Eksport danych CSV -->
-                <div style="background: var(--bg-secondary); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;">
-                    <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;">EKSPORT DANYCH (CSV / R):</span>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                        <button type="button" class="btn btn-ghost" onclick="window.exportCurrentParamCsv && window.exportCurrentParamCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV z widocznym na mapie parametrem">
-                            CSV: bieżący
-                        </button>
-                        <button type="button" class="btn btn-ghost" onclick="window.exportAllParamsCsv && window.exportAllParamsCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV ze wszystkimi dostępnymi stacjami i parametrami">
-                            CSV: wszystkie
-                        </button>
-                    </div>
-                    <div id="export-meta-info" style="font-size: 0.69rem; color: var(--text-secondary); background: var(--bg-primary); padding: 4px 6px; border-radius: 4px; border: 1px dashed var(--border-subtle); text-align: center; line-height: 1.3;" title="Zakres czasowy i horyzont aktualnego eksportu CSV">
-                        Aktualne: oczekiwanie na dane...
+                <div>
+                    <span class="sb-lbl">Styl liczb</span>
+                    <div class="sb-seg" role="group" aria-label="Styl wyświetlania wartości na mapie">
+                        <button type="button" id="val-style-pill" class="is-active" onclick="window.setValueStyle && window.setValueStyle('pill')" title="Kapsułka w kolorze skali z auto-kontrastem">Kap.</button>
+                        <button type="button" id="val-style-halo" onclick="window.setValueStyle && window.setValueStyle('halo')" title="Rozjaśniona kolorowa cyfra z ostrym obrysem">Kol.</button>
+                        <button type="button" id="val-style-white" onclick="window.setValueStyle && window.setValueStyle('white')" title="Klasyczne białe wartości z ostrym obrysem">Białe</button>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <div class="sb-checks">
+                <label title="Etykiety miejscowości nad warstwą interpolacji"><input type="checkbox" id="chk-cities" onchange="window.updateCitiesVisibility && window.updateCitiesVisibility()" checked> Miasta</label>
+                <label title="Granice państw i województw"><input type="checkbox" id="chk-boundaries" onchange="window.updateBoundariesVisibility && window.updateBoundariesVisibility()" checked> Granice</label>
+                <label title="Punkty lokalizacji stacji pomiarowych"><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
+                <label title="Wartości pomiarowe przy stacjach"><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
+                <label title="Izolinie wybranej zmiennej"><input type="checkbox" id="chk-iso" onchange="window.syncIsoStepVisibility && window.syncIsoStepVisibility(); renderIMGW()"> Izolinie</label>
+                <label title="Niezależne izobary ciśnienia (QFF co 2 hPa)"><input type="checkbox" id="chk-isobars" onchange="renderIMGW()"> Izobary</label>
+                <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
+                <label title="Dopełnienie przestrzenne modelem numerycznym DWD ICON"><input type="checkbox" id="chk-source-model" onchange="renderIMGW()"> Model ICON</label>
+            </div>
+
+            <div id="iso-step-wrap" class="sb-iso-wrap sb-hidden">
+                <div class="sb-lbl-row">
+                    <label for="iso-step" class="sb-lbl">Krok izolinii</label>
+                    <span id="iso-step-val" style="font-size: 11px; color: #e5e5e5; font-weight: 600;">Auto</span>
+                </div>
+                <input type="range" id="iso-step" min="0" max="12" value="0" step="1" aria-label="Krok izolinii interpolacji IDW" oninput="window.updateIsoStepLabel(this.value)" onchange="window.renderIMGW()">
+                <div class="sb-iso-ticks">
+                    <span>Auto</span><span>10</span><span>50</span><span>200</span><span>1000</span>
+                </div>
+            </div>
+        </section>
 
         <!-- SEKCJA: Warstwy -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Warstwy</div>
-            <div id="layer-manager-list" style="display: flex; flex-direction: column; gap: 6px;">
-                <!-- Generowane dynamicznie przez JS -->
+        <section class="sb-sec">
+            <div class="sb-sec-h"><span>Warstwy</span></div>
+            <div id="layer-manager-list" class="sb-layer-list">
+                <!-- Generowane dynamicznie przez js/map/layers.js -->
             </div>
-        </div>
+        </section>
+
+        <!-- SEKCJA: Eksport danych CSV -->
+        <section class="sb-sec">
+            <div class="sb-btn-row">
+                <button type="button" class="sb-plain-btn" onclick="window.exportCurrentParamCsv && window.exportCurrentParamCsv(this)" title="Pobierz plik CSV z widocznym na mapie parametrem">CSV: bieżący</button>
+                <button type="button" class="sb-plain-btn" onclick="window.exportAllParamsCsv && window.exportAllParamsCsv(this)" title="Pobierz plik CSV ze wszystkimi dostępnymi stacjami i parametrami">CSV: wszystkie</button>
+            </div>
+            <div id="export-meta-info" class="sb-export-meta" title="Zakres czasowy i horyzont aktualnego eksportu CSV">
+                Aktualne: oczekiwanie na dane...
+            </div>
+        </section>
 
         <!-- SEKCJA: Źródła danych i autorstwo -->
-        <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Źródła danych i autorstwo</div>
-            
-            <div style="font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;">
+        <footer class="sb-sec sb-sources">
+            <div class="sb-sec-h"><span>Źródła danych i autorstwo</span></div>
+
+            <p style="margin: 0 0 8px 0;">
                 Źródłem pochodzenia danych jest <b>Instytut Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy</b>. Dane Instytutu Meteorologii i Gospodarki Wodnej - Państwowego Instytutu Badawczego zostały przetworzone. Bieżące pomiary operacyjne mogą stanowić dane niezweryfikowane.
-            </div>
-            <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
+            </p>
+            <div>
                 Pełny wykaz źródeł meteorologicznych i geograficznych użytych na mapie:
-                <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem; display: flex; flex-direction: column; gap: 3px;">
+                <ul>
                     <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF) oraz biuletyn pokrywy śnieżnej.</li>
                     <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
                     <li><b>DWD / Open-Meteo</b> (CC BY 4.0) - dane modelu numerycznego DWD ICON (icon_seamless) jako opcjonalne dopełnienie przestrzenne.</li>
@@ -246,34 +221,34 @@
                     <li><b>Eurostat GISCO (&copy; EuroGeographics) oraz GUGiK (PRG)</b> - granice państw Europy w skali 1:1 000 000 oraz wewnętrzne granice województw Polski.</li>
                 </ul>
             </div>
-            
-            <div style="font-size: 0.74rem; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+
+            <div class="sb-sources-copy">
                 Autorem opracowania, przetwarzania danych i wizualizacji map jest <b>Bartosz Drobisz</b>. Wszelkie prawa do projektu B-Mapa zastrzeżone.
             </div>
-        </div>
+        </footer>
 
-    </div>
-    
+    </aside>
+
     <!-- GŁÓWNA MAPA -->
-    <div id="premium-map" style="flex: 1; height: 100%; background: #111; position: relative;">
-        
+    <main id="premium-map" style="flex: 1; height: 100%; background: #111; position: relative;">
+
         <!-- Pasek Narzędziowy Mapy (Top-Left obok kontrolek zoomu) -->
-        <div style="position: absolute; top: 12px; left: 55px; z-index: 1001; display: flex; gap: 8px; align-items: center;">
-            <button id="map-toggle-sidebar" class="btn btn-ghost" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--border-subtle); color: var(--text-primary); width: 34px; height: 34px; padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);" onclick="window.toggleMapSidebar()" title="Pokaż / Ukryj panel boczny" aria-label="Pokaż lub ukryj panel boczny">
+        <div style="position: absolute; top: 12px; left: 55px; z-index: 1001; display: flex; gap: 6px; align-items: center;">
+            <button id="map-toggle-sidebar" type="button" class="sb-plain-btn" style="background: rgba(18, 18, 18, 0.9); width: 34px; height: 34px; padding: 0;" onclick="window.toggleMapSidebar()" title="Pokaż / Ukryj panel boczny" aria-label="Pokaż lub ukryj panel boczny">
                 <i data-lucide="panel-left-close" id="sidebar-toggle-icon" style="width: 16px; height: 16px;"></i>
             </button>
-            <button id="map-fs-btn" class="map-fullscreen-btn" style="width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;" onclick="window.toggleMapFullscreen()" title="Tryb pełnoekranowy (F11 / Esc)" aria-label="Tryb pełnoekranowy">
+            <button id="map-fs-btn" type="button" class="sb-plain-btn" style="background: rgba(18, 18, 18, 0.9); width: 34px; height: 34px; padding: 0;" onclick="window.toggleMapFullscreen()" title="Tryb pełnoekranowy (F11 / Esc)" aria-label="Tryb pełnoekranowy">
                 <i data-lucide="maximize" id="map-fs-icon" style="width: 16px; height: 16px;"></i>
             </button>
         </div>
 
-        <div id="imgw-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; color: white; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+        <div id="imgw-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(18,18,18,0.92); border: 1px solid #2e2e2e; padding: 16px 20px; border-radius: 4px; color: #e5e5e5; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12.5px;">
             <i data-lucide="loader" class="spin"></i> Łączenie z bazą danych (Live)...
         </div>
-        
+
         <!-- Legenda Kreatora -->
-        <div id="kreator-legend" style="display: none; position: absolute; bottom: 10px; right: 10px; background: rgba(15, 23, 42, 0.85); padding: 10px; border-radius: 8px; border: 1px solid var(--border-subtle); z-index: 999; pointer-events: none;">
-            <div style="font-weight: bold; color: var(--text-primary); margin-bottom: 5px; font-size: 0.9rem;">B-Meteo Prognoza</div>
+        <div id="kreator-legend" style="display: none; position: absolute; bottom: 10px; right: 10px; background: rgba(18, 18, 18, 0.9); padding: 10px; border-radius: 4px; border: 1px solid #2e2e2e; z-index: 999; pointer-events: none;">
+            <div style="font-weight: bold; color: #e5e5e5; margin-bottom: 5px; font-size: 0.9rem;">B-Meteo Prognoza</div>
             <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem;">
                 <span style="color: #22c55e;"> MRG (Marginalne)</span>
                 <span style="color: #eab308;"> NWL (Niewielkie)</span>
@@ -282,13 +257,11 @@
                 <span style="color: #d946ef;"> EXT (Ekstremalne)</span>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
-
-
 <style>
-    .leaflet-control-layers-expanded { background: var(--bg-primary) !important; color: var(--text-primary) !important; border: 1px solid var(--border-subtle) !important; border-radius: 8px !important; }
+    .leaflet-control-layers-expanded { background: #121212 !important; color: #e5e5e5 !important; border: 1px solid #2e2e2e !important; border-radius: 4px !important; }
     .imgw-station-marker {
         background: transparent;
         border: none;
@@ -304,15 +277,12 @@
     }
 </style>
 
-
-
-
   <!-- JS Dependencies -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
+
   <!-- Moduł autoryzacji Firebase Google (wymagany do RTDB) -->
   <script type="module" src="js/auth.js"></script>
 

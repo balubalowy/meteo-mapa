@@ -138,10 +138,10 @@
         return history;
     }
 
-    // Minimum lub maksimum wartosci w wybranym oknie czasowym (5h lub 12h)
+    // Minimum lub maksimum wartosci w wybranym oknie czasowym (6h lub 12h)
     function computeMinMaxData(snapshots, zmienna, okres) {
         if (!snapshots.length) return { error: 'Brak snapshotów w historii Firebase.' };
-        const isMax = okres.startsWith('max'), hoursBack = parseInt(okres.replace(/\D/g, ''), 10) || 5;
+        const isMax = okres.startsWith('max'), hoursBack = parseInt(okres.replace(/\D/g, ''), 10) || 6;
         const zi = window.BMapaApi.DEFAULT_ZMIENNE[zmienna] || window.BMapaApi.DEFAULT_ZMIENNE['temp'];
         const latestDt = snapTime(snapshots[snapshots.length - 1]);
         const windowed = snapshots.filter(s => snapTime(s).getTime() >= latestDt.getTime() - hoursBack * 3600000 - 900000);
@@ -179,8 +179,8 @@
         const isEnabled = !!(window.firebaseUser && chk.checked);
         const badge = document.getElementById('rtdb-status-badge');
         if (badge) {
-            badge.textContent = !window.firebaseUser ? 'Wymaga logowania' : (isEnabled ? 'RTDB: Aktywne' : 'RTDB: Wyłączone');
-            badge.style.color = isEnabled ? 'var(--accent-success, #22c55e)' : 'var(--text-muted, #94a3b8)';
+            badge.textContent = !window.firebaseUser ? 'Brak log.' : (isEnabled ? 'RTDB' : 'RTDB wył.');
+            badge.style.color = isEnabled ? '#e5e5e5' : '#777777';
         }
         const okresSelect = document.getElementById('imgw-okres');
         if (!okresSelect) return;

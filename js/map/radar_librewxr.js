@@ -34,26 +34,37 @@ export function applySavedLibreWxrUI() {
     const opts = readSavedOpts();
     const colorEl = document.getElementById('lwxr-color');
     const lightEl = document.getElementById('lwxr-lightning');
+    const lightChk = document.getElementById('lwxr-lightning-quick');
     const arrowsEl = document.getElementById('lwxr-arrows');
     const cellsEl = document.getElementById('lwxr-cells');
     const snowEl = document.getElementById('lwxr-snow');
     if (colorEl) colorEl.value = String(opts.color);
     if (lightEl) lightEl.value = String(opts.lightning || '');
+    if (lightChk) lightChk.checked = Boolean(opts.lightning);
     if (arrowsEl) arrowsEl.checked = Boolean(opts.arrows);
     if (cellsEl) cellsEl.checked = Boolean(opts.cells);
     if (snowEl) snowEl.checked = Boolean(opts.snow);
 }
 
 export function readLibreWxrOptsFromUI() {
+    const lightningVal = document.getElementById('lwxr-lightning')?.value || '';
+    const lightChk = document.getElementById('lwxr-lightning-quick');
+    if (lightChk) lightChk.checked = Boolean(lightningVal);
     const opts = {
         color: document.getElementById('lwxr-color')?.value || DEFAULT_OPTS.color,
         arrows: Boolean(document.getElementById('lwxr-arrows')?.checked),
         cells: Boolean(document.getElementById('lwxr-cells')?.checked),
-        lightning: document.getElementById('lwxr-lightning')?.value || '',
+        lightning: lightningVal,
         snow: document.getElementById('lwxr-snow')?.checked ?? true
     };
     saveOpts(opts);
     return opts;
+}
+
+export function setQuickLightning(enabled) {
+    const lightEl = document.getElementById('lwxr-lightning');
+    if (lightEl) lightEl.value = enabled ? (lightEl.value || 'bolts') : '';
+    return readLibreWxrOptsFromUI();
 }
 
 function syncColorSchemeSelect(schemes) {
@@ -149,8 +160,7 @@ export function setLibreWxrBaseTheme(isLight) {
 }
 
 export function formatLibreWxrStatus(isVisible) {
-    if (!frames.length) return '';
-    if (!isVisible) return 'Warstwa Radar wyłączona - włącz ją w sekcji Warstwy.';
+    if (!frames.length || !isVisible) return '';
     const nowcCount = frames.filter(f => f.isNowcast).length;
     const pastCount = frames.length - nowcCount;
     return `Archiwum: ${pastCount} klatek | Prognoza: +${nowcCount * 10} min`;

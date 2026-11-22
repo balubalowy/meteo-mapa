@@ -13,17 +13,7 @@ export function updateDelayBadge(latestTimeMs, paramName) {
     badge.style.display = 'inline-flex';
 
     const diffMin = Math.round(Math.max(0, Date.now() - latestTimeMs) / 60000);
-    let color = '#22c55e', bg = 'rgba(34, 197, 94, 0.12)', border = 'rgba(34, 197, 94, 0.35)';
-
-    if (diffMin > 45) {
-        color = '#ef4444'; bg = 'rgba(239, 68, 68, 0.12)'; border = 'rgba(239, 68, 68, 0.35)';
-    } else if (diffMin > 20) {
-        color = '#eab308'; bg = 'rgba(234, 179, 8, 0.12)'; border = 'rgba(234, 179, 8, 0.35)';
-    }
-
-    badge.style.color = color;
-    badge.style.background = bg;
-    badge.style.borderColor = border;
+    badge.classList.toggle('is-stale', diffMin > 45);
     badge.textContent = `${diffMin} min temu`;
     badge.title = `Opóźnienie danych: ${paramName || 'obserwacja'}\nPomiar: ${fmtPlTime(latestTimeMs)}`;
 }
@@ -94,6 +84,7 @@ export function initUIControls(map) {
     }, 30000);
 
     syncValueStyleButtons(getValueStyle());
+    syncIsoStepVisibility();
 }
 
 const VALUE_STYLE_KEY = 'bmapa_value_style_v2';
@@ -110,7 +101,7 @@ export function getValueStyle() {
 function syncValueStyleButtons(mode) {
     VALID_VALUE_STYLES.forEach(m => {
         const btn = document.getElementById(`val-style-${m}`);
-        if (btn) btn.className = m === mode ? 'btn btn-primary' : 'btn btn-ghost';
+        if (btn) btn.classList.toggle('is-active', m === mode);
     });
 }
 
@@ -119,6 +110,33 @@ export function setValueStyle(mode) {
     try { localStorage.setItem(VALUE_STYLE_KEY, next); } catch (_) {}
     syncValueStyleButtons(next);
     window.renderIMGW?.();
+}
+
+export function selectMapParam(param) {
+    const input = document.getElementById('imgw-zmienna');
+    if (input) input.value = param;
+    document.querySelectorAll('.sb-param-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.param === param);
+    });
+    const iso = document.getElementById('iso-step');
+    if (iso && typeof window.updateIsoStepLabel === 'function') window.updateIsoStepLabel(iso.value);
+    window.renderIMGW?.();
+}
+
+export function setStationProvider(provider) {
+    const isRR = provider === 'rr';
+    const rImgw = document.getElementById('provider-imgw');
+    const rRr = document.getElementById('provider-rr');
+    if (rImgw) rImgw.checked = !isRR;
+    if (rRr) rRr.checked = isRR;
+    document.getElementById('btn-prov-imgw')?.classList.toggle('is-active', !isRR);
+    document.getElementById('btn-prov-rr')?.classList.toggle('is-active', isRR);
+    window.renderIMGW?.();
+}
+
+export function syncIsoStepVisibility() {
+    const show = Boolean(document.getElementById('chk-iso')?.checked);
+    document.getElementById('iso-step-wrap')?.classList.toggle('sb-hidden', !show);
 }
 
 // Rozjasnia kolor cyfry o 38% w strone bieli, aby wyraznie odcinal sie od identycznego tla IDW
@@ -156,3 +174,6 @@ export function updateCitiesVisibility() {
 window.updateCitiesVisibility = updateCitiesVisibility;
 window.setValueStyle = setValueStyle;
 window.getValueStyle = getValueStyle;
+window.selectMapParam = selectMapParam;
+window.setStationProvider = setStationProvider;
+window.syncIsoStepVisibility = syncIsoStepVisibility;

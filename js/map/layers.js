@@ -3,7 +3,7 @@
 
 export const DEFAULT_MAP_LAYERS = {
     radar:     { id: 'radar',     name: 'Radar', visible: false, opacity: 68, pane: 'radarPane' },
-    inter:     { id: 'inter',     name: 'Interpolacja', visible: true, opacity: 88, pane: 'weatherPane' },
+    inter:     { id: 'inter',     name: 'IDW', visible: true, opacity: 88, pane: 'weatherPane' },
     satellite: { id: 'satellite', name: 'Satelita', visible: true, opacity: 68, pane: 'satellitePane' }
 };
 export const DEFAULT_LAYER_ORDER = ['radar', 'inter', 'satellite'];
@@ -103,37 +103,25 @@ const LAYER_OPACITY_ACTIONS = {
     inter: (comp, op) => { window.idwOverlay?.setOpacity(op); }
 };
 
-function renderLayerControls(key) {
-    if (key === 'satellite') {
-        const isDay = (window.getSatelliteMode?.() || 'day') === 'day';
-        return `<div style="display:inline-flex; gap:2px; margin-left:auto; margin-right:6px;">
-            <button class="btn ${isDay ? 'btn-primary' : 'btn-ghost'}" onclick="window.setSatelliteMode('day')" style="padding:1px 5px; font-size:0.65rem;">Dzień</button>
-            <button class="btn ${!isDay ? 'btn-primary' : 'btn-ghost'}" onclick="window.setSatelliteMode('night')" style="padding:1px 5px; font-size:0.65rem;">Noc</button>
-        </div>`;
-    }
-    return '';
-}
-
 function renderLayerItem(key, idx, total) {
     const item = window.MAP_LAYERS[key];
     if (!item) return '';
     const isTop = idx === 0, isBottom = idx === total - 1;
-    const ctrl = renderLayerControls(key);
+    const isDay = (window.getSatelliteMode?.() || 'day') === 'day';
+    const satRow = (key === 'satellite' && item.visible)
+        ? `<div class="sb-sat-row"><span style="font-size:11px;color:#777;">Tryb</span><div class="sb-seg"><button type="button" class="${isDay ? 'is-active' : ''}" onclick="window.setSatelliteMode('day')">Dzień</button><button type="button" class="${!isDay ? 'is-active' : ''}" onclick="window.setSatelliteMode('night')">Noc</button></div></div>`
+        : '';
 
-    return `<div class="layer-item-card" style="background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:6px; padding:7px 10px; display:flex; flex-direction:column; gap:5px;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600; cursor:pointer; margin:0; color:var(--text-primary);"><input type="checkbox" ${item.visible ? 'checked' : ''} onchange="window.toggleLayer('${key}', this.checked)"><span>${item.name}</span></label>
-            <div style="display:flex; align-items:center; gap:3px;">
-                ${ctrl}
-                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);${isTop ? ' opacity:0.25; cursor:default;' : ''}" title="Przesuń wyżej" onclick="window.moveLayer('${key}', 'up')" ${isTop ? 'disabled' : ''}>▲</button>
-                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);${isBottom ? ' opacity:0.25; cursor:default;' : ''}" title="Przesuń niżej" onclick="window.moveLayer('${key}', 'down')" ${isBottom ? 'disabled' : ''}>▼</button>
+    return `<div>
+        <div class="sb-layer-line">
+            <label class="sb-inline-chk"><input type="checkbox" ${item.visible ? 'checked' : ''} onchange="window.toggleLayer('${key}', this.checked)"><span>${item.name}</span></label>
+            <input type="range" min="0" max="100" value="${item.opacity}" aria-label="Krycie warstwy ${item.name}" oninput="window.setLayerOpacity('${key}', this.value); document.getElementById('lbl-op-${key}').textContent = this.value + '%'">
+            <span id="lbl-op-${key}" class="sb-layer-pct">${item.opacity}%</span>
+            <div class="sb-ord">
+                <button type="button" title="Przesuń wyżej" onclick="window.moveLayer('${key}', 'up')" ${isTop ? 'disabled' : ''}>▲</button>
+                <button type="button" title="Przesuń niżej" onclick="window.moveLayer('${key}', 'down')" ${isBottom ? 'disabled' : ''}>▼</button>
             </div>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:var(--text-muted);">
-            <span style="min-width:42px;">Krycie:</span>
-            <input type="range" min="0" max="100" value="${item.opacity}" oninput="window.setLayerOpacity('${key}', this.value); document.getElementById('lbl-op-${key}').textContent = this.value + '%'" style="flex:1; accent-color:var(--accent-primary); height:4px;">
-            <span id="lbl-op-${key}" style="width:32px; text-align:right;">${item.opacity}%</span>
-        </div>
+        </div>${satRow}
     </div>`;
 }
 
@@ -171,6 +159,7 @@ export function initLayerManager(map, components) {
         window.MAP_LAYERS[key].visible = isChecked;
         saveLayerState();
         LAYER_TOGGLE_ACTIONS[key]?.(map, components, isChecked);
+        window.renderLayerManagerUI();
     };
 
     window.setLayerOpacity = (key, val) => {
@@ -188,6 +177,7 @@ export function initLayerManager(map, components) {
     };
 
     if (window.MAP_LAYERS.satellite?.visible) components.getActiveSatelliteLayer?.()?.addTo(map);
+    window.onRadarVisibilityChange?.(Boolean(window.MAP_LAYERS.radar?.visible));
     window.applyLayerOrder();
     window.renderLayerManagerUI();
 }

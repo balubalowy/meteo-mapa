@@ -7,8 +7,8 @@ import { initSatellite, syncSatelliteTime } from './satellite.js';
 import {
     applySavedLibreWxrUI, loadLibreWxrFrames, renderLibreWxrFrame,
     getLibreWxrLayer, getLibreWxrFrames, getLibreWxrLastPastTime, getLibreWxrDefaultIndex,
-    setLibreWxrBaseTheme, readLibreWxrOptsFromUI, formatLibreWxrStatus, setRadarStatusMsg,
-    updateForecastBadge
+    setLibreWxrBaseTheme, readLibreWxrOptsFromUI, setQuickLightning, formatLibreWxrStatus,
+    setRadarStatusMsg, updateForecastBadge
 } from './radar_librewxr.js';
 
 let currentFrame = 0;
@@ -87,9 +87,19 @@ function setupRadarControls(map) {
     });
 }
 
+function syncRadarPanelVisibility(visible) {
+    const chk = document.getElementById('chk-radar-quick');
+    if (chk) chk.checked = Boolean(visible);
+    document.getElementById('radar-controls-body')?.classList.toggle('sb-hidden', !visible);
+}
+
 function registerRadarGlobals(map) {
     window.updateLibreWxrOptions = () => {
         readLibreWxrOptsFromUI();
+        showRadarFrame(map, currentFrame);
+    };
+    window.toggleQuickLightning = (enabled) => {
+        setQuickLightning(enabled);
         showRadarFrame(map, currentFrame);
     };
     window.setLibreWxrTheme = (isLight) => {
@@ -97,6 +107,7 @@ function registerRadarGlobals(map) {
         showRadarFrame(map, currentFrame);
     };
     window.onRadarVisibilityChange = (visible) => {
+        syncRadarPanelVisibility(visible);
         if (visible && !getLibreWxrFrames().length) {
             refreshLibreWxr(map, true);
             return;
