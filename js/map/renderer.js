@@ -59,7 +59,7 @@ function buildMarkerHtml(idx, data, cfg, ptColor, rgba) {
     const hasDir = !isNaN(data.pt_dirs?.[idx]) && data.pt_dirs?.[idx] !== null && data.pt_vals[idx] > 0;
     if (cfg.showPt && isWind && !cfg.okres.startsWith('trend') && hasDir) {
         const dir = data.pt_dirs[idx] + 180;
-        html += `<div style="width:18px; height:18px; margin:2px auto; transform: rotate(${dir}deg); color: ${ptColor}; text-shadow: 0 0 2px black;">
+        html += `<div style="width:18px; height:18px; flex-shrink:0; margin:2px auto; transform: rotate(${dir}deg); color: ${ptColor}; text-shadow: 0 0 2px black;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 0px 1px black);">
                 <line x1="12" y1="21" x2="12" y2="3"></line>
                 <polyline points="5 10 12 3 19 10"></polyline>
@@ -67,7 +67,7 @@ function buildMarkerHtml(idx, data, cfg, ptColor, rgba) {
         </div>`;
     } else if (cfg.showPt) {
         const border = isForecast ? '2px dashed #60a5fa' : '1px solid rgba(255,255,255,0.75)';
-        html += `<div style="width:9px;height:9px;background:${ptColor};border-radius:50%;margin:2px auto;box-shadow:0 0 2px black; border:${border};"></div>`;
+        html += `<div style="width:9px;height:9px;flex-shrink:0;background:${ptColor};border-radius:50%;margin:2px auto;box-shadow:0 0 2px black; border:${border};"></div>`;
     }
     return html;
 }

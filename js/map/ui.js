@@ -96,15 +96,15 @@ export function initUIControls(map) {
     syncValueStyleButtons(getValueStyle());
 }
 
-const VALUE_STYLE_KEY = 'bmapa_value_style_v1';
-const VALID_VALUE_STYLES = ['halo', 'pill', 'white'];
+const VALUE_STYLE_KEY = 'bmapa_value_style_v2';
+const VALID_VALUE_STYLES = ['pill', 'halo', 'white'];
 
 export function getValueStyle() {
     try {
         const saved = localStorage.getItem(VALUE_STYLE_KEY);
         if (VALID_VALUE_STYLES.includes(saved)) return saved;
     } catch (_) {}
-    return 'halo';
+    return 'pill';
 }
 
 function syncValueStyleButtons(mode) {
@@ -115,27 +115,32 @@ function syncValueStyleButtons(mode) {
 }
 
 export function setValueStyle(mode) {
-    const next = VALID_VALUE_STYLES.includes(mode) ? mode : 'halo';
+    const next = VALID_VALUE_STYLES.includes(mode) ? mode : 'pill';
     try { localStorage.setItem(VALUE_STYLE_KEY, next); } catch (_) {}
     syncValueStyleButtons(next);
     window.renderIMGW?.();
 }
 
-// Renderuje wartosc pomiarowa w wybranym trybie: Wariant E (Smart Halo), Wariant B (kapsulka) lub klasyczna biel
+// Rozjasnia kolor cyfry o 38% w strone bieli, aby wyraznie odcinal sie od identycznego tla IDW
+function liftTextColor([r, g, b]) {
+    const mix = c => Math.round(c + (255 - c) * 0.38);
+    return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+}
+
+// Renderuje wartosc pomiarowa w wybranym trybie: Kapsulka (domyslna), Kolor (ostry obrys) lub Biale
 export function formatStationValueHtml(txt, suffix, rgba) {
     const mode = getValueStyle();
     if (mode === 'white') return `<div class="st-val-white">${txt}${suffix}</div>`;
 
     const isZero = rgba[3] < 25;
-    const lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2];
     if (mode === 'pill') {
         if (isZero) return `<div class="st-val-pill st-val-zero">${txt}${suffix}</div>`;
+        const lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2];
         const fg = lum > 142 ? '#0f172a' : '#ffffff';
         return `<div class="st-val-pill" style="background:rgb(${rgba[0]},${rgba[1]},${rgba[2]});color:${fg};">${txt}${suffix}</div>`;
     }
     if (isZero) return `<div class="st-val-halo st-val-zero">${txt}${suffix}</div>`;
-    const cls = lum < 75 ? 'st-val-halo st-val-halo-light' : 'st-val-halo';
-    return `<div class="${cls}" style="color:rgb(${rgba[0]},${rgba[1]},${rgba[2]});">${txt}${suffix}</div>`;
+    return `<div class="st-val-halo" style="color:${liftTextColor(rgba)};">${txt}${suffix}</div>`;
 }
 
 export function updateCitiesVisibility() {

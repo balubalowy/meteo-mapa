@@ -147,9 +147,9 @@
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
                         <span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Styl wartości:</span>
                         <div style="display: flex; gap: 4px; background: var(--bg-primary); padding: 2px; border-radius: 6px; border: 1px solid var(--border-subtle);">
-                            <button type="button" id="val-style-halo" class="btn btn-primary" onclick="window.setValueStyle && window.setValueStyle('halo')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kolorowa cyfra z inteligentnym obrysem (Wariant E)">Kolor</button>
-                            <button type="button" id="val-style-pill" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('pill')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kapsułka w kolorze skali z auto-kontrastem (Wariant B)">Kapsułka</button>
-                            <button type="button" id="val-style-white" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('white')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Klasyczne białe wartości z obrysem">Białe</button>
+                            <button type="button" id="val-style-pill" class="btn btn-primary" onclick="window.setValueStyle && window.setValueStyle('pill')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kapsułka w kolorze skali z auto-kontrastem">Kapsułka</button>
+                            <button type="button" id="val-style-halo" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('halo')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Rozjaśniona kolorowa cyfra z ostrym obrysem">Kolor</button>
+                            <button type="button" id="val-style-white" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('white')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Klasyczne białe wartości z ostrym obrysem">Białe</button>
                         </div>
                     </div>
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
@@ -269,6 +269,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        overflow: visible;
     }
 </style>
 
