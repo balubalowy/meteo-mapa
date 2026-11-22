@@ -36,9 +36,10 @@
     }
 
     function formatScopeDescriptions(typDanych, horyzont, dtOd, dtDo) {
-        const dataStr = dtDo.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const timeDo = dtDo.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-        const timeOd = dtOd.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        const tz = 'Europe/Warsaw';
+        const dataStr = dtDo.toLocaleDateString('pl-PL', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeDo = dtDo.toLocaleTimeString('pl-PL', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+        const timeOd = dtOd.toLocaleTimeString('pl-PL', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
         const ymd = formatYmdUtc(dtDo);
         const hmDo = `${pad(dtDo.getUTCHours())}${pad(dtDo.getUTCMinutes())}`;
         const hmOd = `${pad(dtOd.getUTCHours())}${pad(dtOd.getUTCMinutes())}`;
@@ -49,13 +50,13 @@
         if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
             const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
             const tag = typDanych === 'MINIMUM' ? 'min5h' : 'max5h';
-            return { opis: `${lbl} (5h): ${dataStr}, ${timeOd}–${timeDo} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
+            return { opis: `${lbl} (5h): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
         }
-        return { opis: `Trend (${horyzont}): ${dataStr}, ${timeOd}–${timeDo} (${formatHmUtc(dtOd)}–${formatHmUtc(dtDo)} UTC)`, fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z` };
+        return { opis: `Trend (${horyzont}): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z` };
     }
 
-    function resolveScope(pData) {
-        const okres = window.currentRenderedOkres || 'now';
+    function resolveScope(pData, forcedOkres = null) {
+        const okres = forcedOkres || window.currentRenderedOkres || 'now';
         const typDanych = determineDataType(pData, okres);
         const horyzont = pData?.horyzont || okres;
         const { dtOd, dtDo } = determineDateRange(pData, typDanych);
@@ -70,11 +71,11 @@
         return isForeign ? 'ASOS' : 'IMGW';
     }
 
-    function buildRowsFromParam(paramKey, pData) {
+    function buildRowsFromParam(paramKey, pData, forcedOkres = null) {
         if (!pData?.pt_lats?.length) return [];
         const rows = [];
         const unit = PARAM_UNITS[paramKey] || '';
-        const scope = resolveScope(pData);
+        const scope = resolveScope(pData, forcedOkres);
         const allowForeign = document.getElementById('chk-foreign')?.checked ?? false;
         const allowModel = document.getElementById('chk-source-model')?.checked ?? false;
 
@@ -111,7 +112,7 @@
     window.updateExportMetaBadge = function(dataOverride) {
         const el = document.getElementById('export-meta-info');
         if (!el) return;
-        const data = dataOverride || window.currentRenderedData;
+        const data = arguments.length > 0 ? dataOverride : window.currentRenderedData;
         if (!data?.pt_lats?.length) {
             el.textContent = 'Brak danych do eksportu';
             el.style.color = 'var(--text-muted, #94a3b8)';
@@ -130,11 +131,7 @@
         setTimeout(() => { btn.textContent = prevText; btn.style.borderColor = ''; }, 3500);
     }
 
-    const CSV_HEADER = [
-        'id_stacji', 'nazwa', 'lat', 'lon', 'parametr', 'wartosc', 'jednostka',
-        'typ_danych', 'horyzont', 'czas_od_utc', 'czas_do_utc', 'czas_utc',
-        'kierunek_deg', 'zrodlo', 'typ'
-    ];
+    const CSV_HEADER = ['id_stacji', 'nazwa', 'lat', 'lon', 'parametr', 'wartosc', 'jednostka', 'typ_danych', 'horyzont', 'czas_od_utc', 'czas_do_utc', 'czas_utc', 'kierunek_deg', 'zrodlo', 'typ'];
 
     window.exportCurrentParamCsv = async function(btn) {
         const paramEl = document.getElementById('imgw-zmienna');
@@ -149,6 +146,7 @@
             }
             const scope = resolveScope(data);
             const rows = buildRowsFromParam(param, data);
+            if (!rows.length) { showStatus(btn, 'Brak danych', true); return; }
             const csv = [CSV_HEADER.join(','), ...rows.map(r => r.join(','))].join('\r\n');
             triggerDownload(csv, `bmapa_${param}_${scope.fileTag}.csv`);
             showStatus(btn, scope.typDanych === 'AKTUALNE' ? 'Pobrano aktualne' : `Pobrano ${scope.typDanych}`);
@@ -177,8 +175,9 @@
             const allRows = [];
             let latestScope = null;
             for (const paramKey of Object.keys(dataObj)) {
-                allRows.push(...buildRowsFromParam(paramKey, dataObj[paramKey]));
-                if (!latestScope) latestScope = resolveScope(dataObj[paramKey]);
+                const paramRows = buildRowsFromParam(paramKey, dataObj[paramKey], 'now');
+                allRows.push(...paramRows);
+                if (!latestScope && paramRows.length) latestScope = resolveScope(dataObj[paramKey], 'now');
             }
 
             if (!allRows.length) {

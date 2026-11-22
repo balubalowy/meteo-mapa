@@ -1,11 +1,15 @@
 // js/map/interpolation.js
-// Numeryczna interpolacja IDW (Inverse Distance Weighting), skale barwne i wektorowanie
+// Numeryczna interpolacja IDW (Inverse Distance Weighting), skale barwne RGBA i przycinanie do granic RP
 
-import { POLAND_POLY_COORDS } from './coords_border.js';
+import { POLAND_POLY_RINGS } from './coords_border.js';
 import { drawIsolines } from './marching_squares.js';
+
+const DEFAULT_ALPHA = 170;
 
 function _calcWndNorm(kmh, mx = 259) { return +(kmh / mx).toFixed(4); }
 
+// Format stopu: [norm, '#RRGGBB'] lub [norm, '#RRGGBB', alpha 0..255]
+// Wartosci zerowe/niskie dla sniegu, wiatru i trendow przechodza plynnie w przezroczystosc (alpha=0)
 export const COLORSCALES = {
     temp: [
         [0.0, '#f4c2f4'], [0.055, '#e020e0'], [0.111, '#8a2be2'], [0.166, '#4b0082'],
@@ -15,20 +19,33 @@ export const COLORSCALES = {
         [0.888, '#8b0000'], [0.944, '#5c4033'], [1.0, '#808080']
     ],
     wind: [
-        [0.0, '#FFFFFF'], [_calcWndNorm(9), '#C8FFFF'], [_calcWndNorm(19), '#00FFFF'], [_calcWndNorm(28), '#0088FF'],
-        [_calcWndNorm(37), '#0000CD'], [_calcWndNorm(46), '#00C800'], [_calcWndNorm(56), '#80FF00'],
-        [_calcWndNorm(65), '#FFFF00'], [_calcWndNorm(74), '#FFD700'], [_calcWndNorm(83), '#FFA500'],
-        [_calcWndNorm(93), '#FF4500'], [_calcWndNorm(102), '#FF0000'], [_calcWndNorm(111), '#CC0000'],
-        [_calcWndNorm(120), '#800000'], [_calcWndNorm(130), '#800080'], [_calcWndNorm(139), '#4B0082'],
-        [_calcWndNorm(148), '#FF00FF'], [_calcWndNorm(157), '#FF69B4'], [_calcWndNorm(167), '#808080'], [1.0, '#000000']
+        [0.0, '#7ceeff', 0], [_calcWndNorm(5), '#7ceeff', 0], [_calcWndNorm(12), '#5ce6ff', 95],
+        [_calcWndNorm(19), '#00FFFF', 155], [_calcWndNorm(28), '#0088FF', 175],
+        [_calcWndNorm(37), '#0000CD', 180], [_calcWndNorm(46), '#00C800', 180], [_calcWndNorm(56), '#80FF00', 180],
+        [_calcWndNorm(65), '#FFFF00', 185], [_calcWndNorm(74), '#FFD700', 185], [_calcWndNorm(83), '#FFA500', 185],
+        [_calcWndNorm(93), '#FF4500', 190], [_calcWndNorm(102), '#FF0000', 190], [_calcWndNorm(111), '#CC0000', 190],
+        [_calcWndNorm(120), '#800000', 195], [_calcWndNorm(130), '#800080', 195], [_calcWndNorm(139), '#4B0082', 195],
+        [_calcWndNorm(148), '#FF00FF', 200], [_calcWndNorm(157), '#FF69B4', 200], [_calcWndNorm(167), '#808080', 200], [1.0, '#000000', 205]
     ],
     humidity: [[0.0, '#FFD700'], [0.25, '#FF8C00'], [0.5, '#32CD32'], [0.75, '#1E90FF'], [1.0, '#00008B']],
     dewpoint: [[0.0, '#0000FF'], [0.26, '#00BFFF'], [0.39, '#00FF7F'], [0.53, '#ADFF2F'], [0.66, '#FFD700'], [0.79, '#FF4500'], [0.92, '#FF0000'], [1.0, '#8B0000']],
     pressure: [[0.0, '#3b0764'], [0.17, '#991b1b'], [0.33, '#ea580c'], [0.47, '#eab308'], [0.55, '#22c55e'], [0.67, '#06b6d4'], [0.80, '#2563eb'], [0.92, '#1e1b4b'], [1.0, '#4338ca']],
     lcl: [[0.0, '#312e81'], [0.15, '#2563eb'], [0.30, '#06b6d4'], [0.45, '#10b981'], [0.60, '#eab308'], [0.75, '#f97316'], [0.90, '#ef4444'], [1.0, '#831843']],
-    snow: [[0.0, '#fdf2f8'], [0.08, '#fbcfe8'], [0.20, '#f472b6'], [0.35, '#ec4899'], [0.55, '#a855f7'], [0.75, '#7e22ce'], [0.90, '#581c87'], [1.0, '#2e0854']],
-    trend_temp: [[0.0, '#1e3a8a'], [0.2, '#3b82f6'], [0.4, '#93c5fd'], [0.5, '#f3f4f6'], [0.6, '#fca5a5'], [0.8, '#ef4444'], [1.0, '#991b1b']],
-    trend_humidity: [[0.0, '#854d0e'], [0.25, '#d97706'], [0.5, '#f3f4f6'], [0.75, '#0284c7'], [1.0, '#1e3a8a']]
+    snow: [
+        [0.0, '#fbcfe8', 0], [0.005, '#fbcfe8', 0], [0.02, '#fbcfe8', 120], [0.08, '#f9a8d4', 165],
+        [0.20, '#f472b6', 180], [0.35, '#ec4899', 185], [0.55, '#a855f7', 190],
+        [0.75, '#7e22ce', 195], [0.90, '#581c87', 200], [1.0, '#2e0854', 205]
+    ],
+    trend_temp: [
+        [0.0, '#1e3a8a', 185], [0.2, '#3b82f6', 175], [0.4, '#93c5fd', 135], [0.47, '#93c5fd', 35],
+        [0.495, '#93c5fd', 0], [0.505, '#fca5a5', 0], [0.53, '#fca5a5', 35],
+        [0.6, '#fca5a5', 135], [0.8, '#ef4444', 175], [1.0, '#991b1b', 185]
+    ],
+    trend_humidity: [
+        [0.0, '#854d0e', 185], [0.25, '#d97706', 165], [0.44, '#d97706', 85],
+        [0.495, '#d97706', 0], [0.505, '#0284c7', 0], [0.56, '#0284c7', 85],
+        [0.75, '#0284c7', 165], [1.0, '#1e3a8a', 185]
+    ]
 };
 
 export const DEFAULT_ZMIENNE = {
@@ -53,31 +70,38 @@ const _scaleRgbCache = new WeakMap();
 function getParsedScale(scale) {
     let parsed = _scaleRgbCache.get(scale);
     if (!parsed) {
-        parsed = scale.map(s => [s[0], hexToRgb(s[1])]);
+        parsed = scale.map(s => [s[0], hexToRgb(s[1]), s[2] !== undefined ? s[2] : DEFAULT_ALPHA]);
         _scaleRgbCache.set(scale, parsed);
     }
     return parsed;
 }
 
-export function getColorRGBA(val, scale, cmin, cmax, alpha = 160) {
-    if (val === null || isNaN(val)) return [0, 0, 0, 0];
-    const parsed = getParsedScale(scale);
-    const norm = Math.max(0, Math.min(1, (val - cmin) / (cmax - cmin)));
+function sampleParsedScale(parsed, norm) {
     for (let i = 0; i < parsed.length - 1; i++) {
         if (norm >= parsed[i][0] && norm <= parsed[i + 1][0]) {
             const span = parsed[i + 1][0] - parsed[i][0];
             const t = span > 0 ? (norm - parsed[i][0]) / span : 0;
             const c1 = parsed[i][1], c2 = parsed[i + 1][1];
+            const a1 = parsed[i][2], a2 = parsed[i + 1][2];
             return [
                 Math.round(c1[0] + t * (c2[0] - c1[0])),
                 Math.round(c1[1] + t * (c2[1] - c1[1])),
                 Math.round(c1[2] + t * (c2[2] - c1[2])),
-                alpha
+                Math.round(a1 + t * (a2 - a1))
             ];
         }
     }
-    const c = parsed[parsed.length - 1][1];
-    return [c[0], c[1], c[2], alpha];
+    const last = parsed[parsed.length - 1];
+    return [last[1][0], last[1][1], last[1][2], last[2]];
+}
+
+export function getColorRGBA(val, scale, cmin, cmax, alphaOverride = null) {
+    if (val === null || isNaN(val)) return [0, 0, 0, 0];
+    const parsed = getParsedScale(scale);
+    const norm = Math.max(0, Math.min(1, (val - cmin) / (cmax - cmin)));
+    const rgba = sampleParsedScale(parsed, norm);
+    if (alphaOverride !== null) rgba[3] = alphaOverride;
+    return rgba;
 }
 
 export function latToMercY(lat) {
@@ -85,7 +109,7 @@ export function latToMercY(lat) {
     return Math.log(Math.tan(Math.PI / 4.0 + rad / 2.0));
 }
 
-// Oblicza wezly siatki IDW z metryka kilometrowa (brak znieksztalcen osi X/Y) i wykladnikiem p=3.5
+// Oblicza wezly siatki IDW z metryka kilometrowa (brak znieksztalcen osi X/Y) i wykladnikiem p=3
 function computeIdwRaster(pts, gw, gh, kx, ky, scale, cmin, cmax) {
     const valGrid = new Float32Array(gw * gh);
     const heatCanvas = document.createElement('canvas');
@@ -108,38 +132,30 @@ function computeIdwRaster(pts, gw, gh, kx, ky, scale, cmin, cmax) {
             valGrid[idx] = val;
 
             const norm = Math.max(0, Math.min(1, (val - cmin) * invSpan));
-            let r = pScale[0][1][0], g = pScale[0][1][1], b = pScale[0][1][2];
-            for (let s = 0; s < pScale.length - 1; s++) {
-                if (norm >= pScale[s][0] && norm <= pScale[s + 1][0]) {
-                    const span = pScale[s + 1][0] - pScale[s][0];
-                    const t = span > 0 ? (norm - pScale[s][0]) / span : 0;
-                    r = Math.round(pScale[s][1][0] + t * (pScale[s + 1][1][0] - pScale[s][1][0]));
-                    g = Math.round(pScale[s][1][1] + t * (pScale[s + 1][1][1] - pScale[s][1][1]));
-                    b = Math.round(pScale[s][1][2] + t * (pScale[s + 1][1][2] - pScale[s][1][2]));
-                    break;
-                }
-            }
+            const rgba = sampleParsedScale(pScale, norm);
             const pIdx = idx * 4;
-            heatImg.data[pIdx] = r; heatImg.data[pIdx + 1] = g;
-            heatImg.data[pIdx + 2] = b; heatImg.data[pIdx + 3] = 160;
+            heatImg.data[pIdx] = rgba[0]; heatImg.data[pIdx + 1] = rgba[1];
+            heatImg.data[pIdx + 2] = rgba[2]; heatImg.data[pIdx + 3] = rgba[3];
         }
     }
     heatCtx.putImageData(heatImg, 0, 0);
     return { valGrid, heatCanvas };
 }
 
-// Przycina plotno do pelnego wektora granic Rzeczypospolitej Polskiej
+// Przycina plotno do pelnego wielopiercieniowego wektora granic Rzeczypospolitej Polskiej (GISCO 1:1M)
 function clipRasterToPoland(offCanvas, w, h, minLon, maxLon, minMercY, maxMercY) {
     const mainCanvas = document.createElement('canvas');
     mainCanvas.width = w; mainCanvas.height = h;
     const mainCtx = mainCanvas.getContext('2d');
     mainCtx.beginPath();
-    POLAND_POLY_COORDS.forEach(([pLon, pLat], i) => {
-        const px = ((pLon - minLon) / (maxLon - minLon)) * w;
-        const py = (1 - (latToMercY(pLat) - minMercY) / (maxMercY - minMercY)) * h;
-        if (i === 0) mainCtx.moveTo(px, py); else mainCtx.lineTo(px, py);
-    });
-    mainCtx.closePath();
+    for (const ring of POLAND_POLY_RINGS) {
+        ring.forEach(([pLon, pLat], i) => {
+            const px = ((pLon - minLon) / (maxLon - minLon)) * w;
+            const py = (1 - (latToMercY(pLat) - minMercY) / (maxMercY - minMercY)) * h;
+            if (i === 0) mainCtx.moveTo(px, py); else mainCtx.lineTo(px, py);
+        });
+        mainCtx.closePath();
+    }
     mainCtx.clip();
     mainCtx.drawImage(offCanvas, 0, 0);
     return mainCanvas.toDataURL();
@@ -170,8 +186,7 @@ export function generateIDWImage(lats, lons, vals, scale, cmin, cmax, drawIso, s
     offCtx.imageSmoothingQuality = 'high';
     offCtx.drawImage(heatCanvas, 0, 0, d.w, d.h);
     if (drawIso) drawIsolines(offCtx, valGrid, { gw: d.gw, gh: d.gh, w: d.w, h: d.h }, { cmin, cmax, stepVal, unit });
-    if (!clipToPoland) return offCanvas.toDataURL();
-    return clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY);
+    return clipToPoland ? clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY) : offCanvas.toDataURL();
 }
 
 export function generateIsobarsOverlay(lats, lons, vals, bounds, clipToPoland, stepVal = 2.0) {
@@ -179,8 +194,6 @@ export function generateIsobarsOverlay(lats, lons, vals, bounds, clipToPoland, s
     const { valGrid } = computeIdwRaster(d.pts, d.gw, d.gh, d.kx, d.ky, COLORSCALES.pressure, 980, 1040);
     const offCanvas = document.createElement('canvas');
     offCanvas.width = d.w; offCanvas.height = d.h;
-    const offCtx = offCanvas.getContext('2d');
-    drawIsolines(offCtx, valGrid, { gw: d.gw, gh: d.gh, w: d.w, h: d.h }, { cmin: 980, cmax: 1040, stepVal, unit: 'hPa' });
-    if (!clipToPoland) return offCanvas.toDataURL();
-    return clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY);
+    drawIsolines(offCanvas.getContext('2d'), valGrid, { gw: d.gw, gh: d.gh, w: d.w, h: d.h }, { cmin: 980, cmax: 1040, stepVal, unit: '' });
+    return clipToPoland ? clipRasterToPoland(offCanvas, d.w, d.h, d.minLon, d.maxLon, d.minMercY, d.maxMercY) : offCanvas.toDataURL();
 }

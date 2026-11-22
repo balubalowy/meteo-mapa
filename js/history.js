@@ -27,13 +27,26 @@
         return { pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_meta: [] };
     }
 
+    function isValValid(zmienna, val, stationName) {
+        if (val == null || isNaN(val)) return false;
+        return window.BMapaQC?.isValueInPhysicalRange ? window.BMapaQC.isValueInPhysicalRange(zmienna, val, stationName) : true;
+    }
+
     function getStationVal(st, zmienna) {
         if (!st) return null;
         const map = { temp: st.temp ?? st.temperatura, grunt: st.temp_grunt ?? st.temperatura_gruntu, wilg: st.wilg ?? st.wilgotnosc, wiatr: st.wiatr_max ?? st.maks_poryw_kmh, wiatr_sr: st.wiatr_sr ?? st.wiatr_sr_kmh, cisnienie: st.cisnienie };
-        if (zmienna in map) return map[zmienna] ?? null;
+        const name = st.nazwa || window._stationMetaMap?.[String(st.kod)]?.nazwa || '';
+        if (zmienna in map) {
+            const val = map[zmienna];
+            if (!isValValid(zmienna, val, name)) return null;
+            if (zmienna === 'grunt' && window.BMapaQC?.isGroundTempConsistent && !window.BMapaQC.isGroundTempConsistent(val, st.temp ?? st.temperatura, 0, 0)) return null;
+            return val;
+        }
         if (zmienna === 'rosy') {
             const t = st.temp ?? st.temperatura, rh = st.wilg ?? st.wilgotnosc;
-            return (t !== null && rh !== null) ? window.BMapaApi.calculateDewPoint(t, rh) : null;
+            if (!isValValid('temp', t, name) || !isValValid('wilg', rh, name)) return null;
+            const dp = window.BMapaApi.calculateDewPoint(t, rh);
+            return isValValid('rosy', dp, name) ? dp : null;
         }
         return null;
     }
@@ -59,12 +72,6 @@
             if (diff < minDiff) { minDiff = diff; best = snapshots[i]; }
         }
         return best;
-    }
-
-    function isWindOutlier(zmienna, meta, vNow, vPast) {
-        if (zmienna !== 'wiatr' && zmienna !== 'wiatr_sr') return false;
-        const nameUp = (meta.nazwa || '').toUpperCase();
-        return (vNow > 120 || vPast > 120) && !nameUp.includes('ŚNIEŻKA') && !nameUp.includes('KASPROWY');
     }
 
     function pushTrendPoint(result, ctx, ptData) {
@@ -108,9 +115,9 @@
             const vNow = getStationVal(st, zmienna);
             const vPast = getStationVal(pastMap.get(kod), zmienna);
             if (!meta || vNow === null || vPast === null) continue;
-            if (isWindOutlier(zmienna, meta, vNow, vPast)) continue;
             pushTrendPoint(result, ctx, { meta, vNow, vPast });
         }
+        window.BMapaQC?.filterSpatialOutliers?.(result, zmienna);
         return result;
     }
 
@@ -148,6 +155,7 @@
             result.pt_hov.push(`<b>${meta.nazwa}</b><br>${isMax ? 'Maksimum' : 'Minimum'} ${zi.nazwa}: <b>${best.val.toFixed(1)} ${zi.unit}</b> (${best.time})`);
             result.pt_meta.push({ id: kod, nazwa: meta.nazwa || '', czas: best.iso || latestDt.toISOString(), zrodlo: 'IMGW', typ: isMax ? 'MAKSIMUM' : 'MINIMUM' });
         });
+        window.BMapaQC?.filterSpatialOutliers?.(result, zmienna);
         return result;
     }
 
@@ -170,13 +178,8 @@
         const isEnabled = !!(window.firebaseUser && chk.checked);
         const badge = document.getElementById('rtdb-status-badge');
         if (badge) {
-            if (!window.firebaseUser) {
-                badge.textContent = 'Wymaga logowania';
-                badge.style.color = 'var(--text-muted, #94a3b8)';
-            } else {
-                badge.textContent = isEnabled ? 'RTDB: Aktywne' : 'RTDB: Wyłączone';
-                badge.style.color = isEnabled ? 'var(--accent-success, #22c55e)' : 'var(--text-muted, #94a3b8)';
-            }
+            badge.textContent = !window.firebaseUser ? 'Wymaga logowania' : (isEnabled ? 'RTDB: Aktywne' : 'RTDB: Wyłączone');
+            badge.style.color = isEnabled ? 'var(--accent-success, #22c55e)' : 'var(--text-muted, #94a3b8)';
         }
         const okresSelect = document.getElementById('imgw-okres');
         if (!okresSelect) return;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>B-Mapa</title>
-  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na zywo: IMGW, SYNOP, EUMETSAT, Blitzortung.">
+  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, RainViewer, EUMETSAT.">
   <link rel="icon" type="image/png" href="icons/icon-512.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
   
@@ -73,7 +73,7 @@
                 <div style="display: flex; flex-direction: column; gap: 6px; background: var(--bg-secondary); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: bold;">STACJE:</span>
-                        <div style="display: gap: 4px; display: flex;">
+                        <div style="display: flex; gap: 4px;">
                             <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-subtle);" title="Oficjalne stacje IMGW (odczyty godzinowe)">
                                 <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked onchange="renderIMGW()" style="margin: 0; accent-color: var(--accent-primary);">
                                 IMGW
@@ -138,10 +138,11 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.8rem;">
                         <label title="Izolinie wybranej zmiennej"><input type="checkbox" id="chk-iso" onchange="renderIMGW()"> Izolinie</label>
                         <label title="Niezależne izobary ciśnienia (QFF co 2 hPa)"><input type="checkbox" id="chk-isobars" onchange="renderIMGW()"> Izobary</label>
-                        <label title="Etykiety miast na mapie"><input type="checkbox" id="chk-cities" onchange="window.updateCitiesVisibility && window.updateCitiesVisibility()" checked> Miasta</label>
+                        <label title="Etykiety miejscowości nad warstwą interpolacji"><input type="checkbox" id="chk-cities" onchange="window.updateCitiesVisibility && window.updateCitiesVisibility()" checked> Miasta</label>
+                        <label title="Granice państw i województw"><input type="checkbox" id="chk-boundaries" onchange="window.updateBoundariesVisibility && window.updateBoundariesVisibility()" checked> Granice</label>
+                        <label title="Punkty lokalizacji stacji pomiarowych"><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
+                        <label title="Wartości pomiarowe przy stacjach"><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
                         <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
-                        <label><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
-                        <label><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
                     </div>
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -163,12 +164,12 @@
                 <div style="background: var(--bg-secondary); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;">
                     <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: bold;">EKSPORT DANYCH (CSV / R):</span>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                        <label title="Izolinie wybranej zmiennej"><input type="checkbox" id="chk-iso" onchange="renderIMGW()"> Izolinie</label>
-                        <label title="Niezależne izobary ciśnienia (QFF co 2 hPa)"><input type="checkbox" id="chk-isobars" onchange="renderIMGW()"> Izobary</label>
-                        <label title="Etykiety miast na mapie"><input type="checkbox" id="chk-cities" onchange="window.updateCitiesVisibility && window.updateCitiesVisibility()" checked> Miasta</label>
-                        <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
-                        <label><input type="checkbox" id="chk-pt" onchange="renderIMGW()" checked> Punkty</label>
-                        <label><input type="checkbox" id="chk-txt" onchange="renderIMGW()" checked> Wartości</label>
+                        <button type="button" class="btn btn-ghost" onclick="window.exportCurrentParamCsv && window.exportCurrentParamCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV z widocznym na mapie parametrem">
+                            CSV: bieżący
+                        </button>
+                        <button type="button" class="btn btn-ghost" onclick="window.exportAllParamsCsv && window.exportAllParamsCsv(this)" style="padding: 5px 6px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--border-subtle); background: var(--bg-primary); border-radius: 4px;" title="Pobierz plik CSV ze wszystkimi dostępnymi stacjami i parametrami">
+                            CSV: wszystkie
+                        </button>
                     </div>
                     <div id="export-meta-info" style="font-size: 0.69rem; color: var(--text-secondary); background: var(--bg-primary); padding: 4px 6px; border-radius: 4px; border: 1px dashed var(--border-subtle); text-align: center; line-height: 1.3;" title="Zakres czasowy i horyzont aktualnego eksportu CSV">
                         Aktualne: oczekiwanie na dane...
@@ -185,64 +186,26 @@
             </div>
         </div>
 
-        <!-- SEKCJA: Rysowanie -->
-        <div id="section-rysowanie" style="display: none; padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">Rysowanie</div>
-            
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Strefy:</div>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
-                    <button class="btn btn-ghost" style="border: 2px solid #22c55e; color: #22c55e; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#22c55e')" title="MRG (1) - Marginalne">1</button>
-                    <button class="btn btn-ghost" style="border: 2px solid #eab308; color: #eab308; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#eab308')" title="NWL (2) - Niewielkie">2</button>
-                    <button class="btn btn-ghost" style="border: 2px solid #f97316; color: #f97316; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#f97316')" title="SRD (3) - Średnie">3</button>
-                    <button class="btn btn-ghost" style="border: 2px solid #ef4444; color: #ef4444; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#ef4444')" title="DZ (4) - Duże">4</button>
-                    <button class="btn btn-ghost" style="border: 2px solid #d946ef; color: #d946ef; padding: 6px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingColor('#d946ef')" title="EXT (5) - Ekstremalne">5</button>
-                </div>
-                
-                <hr style="border-color: var(--border-subtle); margin: 5px 0;">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Fronty i linie:</div>
-                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
-                    <button class="btn btn-ghost" style="border: 1px solid #f97316; color: #f97316; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('zbieznosc')" title="Zbieżność"><i data-lucide="git-commit" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_chlodny')" title="Front chłodny"><i data-lucide="triangle" style="width: 14px; height: 14px; transform: rotate(180deg);"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px dashed #3b82f6; color: #3b82f6; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_chlodny_2')" title="Front chłodny II (przerywany)"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_cieply')" title="Front ciepły"><i data-lucide="circle-dot" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #d946ef; color: #d946ef; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('front_zokludowany')" title="Front zokludowany"><i data-lucide="disc" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #a8a29e; color: #a8a29e; padding: 6px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('strzalka')" title="Strzałka"><i data-lucide="arrow-up-right" style="width: 14px; height: 14px;"></i></button>
-                </div>
-                
-                <hr style="border-color: var(--border-subtle); margin: 5px 0;">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Zjawiska:</div>
-                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 5px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingMode('wyz')" title="Wyż (W)">W</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 5px 0; font-weight: bold; font-size: 0.8rem; text-align: center;" onclick="setDrawingMode('niz')" title="Niż (N)">N</button>
-                    <button class="btn btn-ghost" style="border: 1px solid #ef4444; color: #ef4444; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('burza')" title="Burza"><i data-lucide="zap" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('deszcz')" title="Deszcz"><i data-lucide="cloud-rain" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #3b82f6; color: #3b82f6; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('snieg')" title="Śnieg"><i data-lucide="snowflake" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #eab308; color: #eab308; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('mgla')" title="Mgła"><i data-lucide="cloud-fog" style="width: 14px; height: 14px;"></i></button>
-                    <button class="btn btn-ghost" style="border: 1px solid #22c55e; color: #22c55e; padding: 5px 0; display: flex; justify-content: center; align-items: center;" onclick="setDrawingMode('kolko')" title="Strefa (kółko)"><i data-lucide="circle" style="width: 14px; height: 14px;"></i></button>
-                </div>
-            </div>
-        </div>
-        
         <!-- SEKCJA: Źródła danych i autorstwo -->
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Źródła danych i autorstwo</div>
             
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
-                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych następujących instytucji / organizacji:
-                <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem;">
-                    <li><b>IMGW-PIB</b> - dane telemetryczne ze stacji, dane radarowe, dane o śniegu.</li>
-                    <li><b>DWD / Open-Meteo</b> - model prognostyczny ICON do danych modelowych pobrany przez Open-Meteo api.</li>
-                    <li><b>IEM ASOS</b> - europejskie stacje synoptyczne i lotniskowe (METAR) do danych zagranicznych.</li>
-                    <li><b>RainViewer</b> - kompozyt radarów meteorologicznych.</li>
-                    <li><b>EUMETSAT</b> - satelita geostacjonarny (HRV i IR, dla dziennych i nocnych).</li>
-                    <li><b>Blitzortung</b> - sieć detekcji wyładowań na żywo.</li>
-                    <li><b>Esri / OSM</b> - podkłady map.</li>
+                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych i geograficznych następujących instytucji i dostawców:
+                <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem; display: flex; flex-direction: column; gap: 3px;">
+                    <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF), kompozyt radarowy POLRAD CMAX oraz biuletyn pokrywy śnieżnej.</li>
+                    <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
+                    <li><b>DWD / Open-Meteo</b> (CC BY 4.0) - dane modelu numerycznego DWD ICON (icon_seamless) jako opcjonalne dopełnienie przestrzenne.</li>
+                    <li><b>IEM ASOS (Iowa State University)</b> - zagraniczne stacje lotniskowe METAR/ASOS (CZ, SK, DE, LT, UA, BY).</li>
+                    <li><b>RainViewer</b> - kafelkowy kompozyt radarów meteorologicznych (archiwum i nowcasting).</li>
+                    <li><b>EUMETSAT</b> - zobrazowania satelitarne WMS: tryb dzienny MSG FES RGB (msg_fes:rgb_eview) oraz nocny MTG-I1 FCI IR 10.5 µm (mtg_fd:ir105_hrfi).</li>
+                    <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i warstwa referencyjna etykiet miejscowości.</li>
+                    <li><b>Eurostat GISCO (&copy; EuroGeographics) oraz GUGiK (PRG)</b> - granice państw Europy w skali 1:1 000 000 oraz wewnętrzne granice województw Polski.</li>
                 </ul>
             </div>
             
             <div style="font-size: 0.74rem; color: var(--text-muted); border-top: 1px solid var(--border-subtle); padding-top: 8px;">
-                Właścicielem opracowania i autorem wizualizacji map jest <b>Bartosz Drobisz</b>. Wszelkie prawa zastrzeżone.
+                Autorem opracowania, przetwarzania danych i wizualizacji map jest <b>Bartosz Drobisz</b>. Wszelkie prawa do projektu B-Mapa zastrzeżone.
             </div>
         </div>
 
@@ -280,19 +243,6 @@
 </div>
 
 
-
-<!-- Modal Wyładowania (LightningMaps) -->
-<div id="lightning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; box-sizing: border-box;">
-    <div style="width: 100%; height: 100%; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
-        <div style="padding: 10px 20px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
-             <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; color: #eab308;"><i data-lucide="zap"></i> Detektor Wyładowań (Live)</h3>
-             <button class="btn btn-ghost" style="padding: 5px; color: var(--text-secondary);" onclick="document.getElementById('lightning-modal').style.display='none'"><i data-lucide="x"></i></button>
-        </div>
-        <div id="lightning-iframe-container" style="flex: 1; width: 100%; position: relative;">
-            <iframe src="https://map.blitzortung.org/#5/52.000/19.000" style="width: 100%; height: 100%; border: none;"></iframe>
-        </div>
-    </div>
-</div>
 
 <style>
     .leaflet-control-layers-expanded { background: var(--bg-primary) !important; color: var(--text-primary) !important; border: 1px solid var(--border-subtle) !important; border-radius: 8px !important; }

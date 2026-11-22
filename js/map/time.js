@@ -13,25 +13,22 @@ export function calculateDewPoint(temp_c, rh_pct) {
     return (b * alpha) / (a - alpha);
 }
 
+function parseTimeMs(input) {
+    if (!input) return NaN;
+    if (input instanceof Date) return input.getTime();
+    if (typeof input === 'number') return input;
+    const s = String(input).trim();
+    const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
+    return Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
+}
+
 export function toIsoUtc(input) {
-    if (!input) return '';
-    let ms = typeof input === 'number' ? input : NaN;
-    if (isNaN(ms)) {
-        const s = String(input).trim();
-        const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
-        ms = Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
-    }
+    const ms = parseTimeMs(input);
     return (isNaN(ms) || ms <= 0) ? '' : new Date(ms).toISOString().replace('.000Z', 'Z');
 }
 
 export function fmtPlTime(input, showSec = false) {
-    if (!input) return '';
-    let ms = typeof input === 'number' ? input : NaN;
-    if (isNaN(ms)) {
-        const s = String(input).trim();
-        const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
-        ms = Date.parse(hasZone ? s : s.replace(' ', 'T') + 'Z');
-    }
+    const ms = parseTimeMs(input);
     if (isNaN(ms) || ms <= 0) return '';
     const d = new Date(ms);
     const opts = { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', ...(showSec ? { second: '2-digit' } : {}) };

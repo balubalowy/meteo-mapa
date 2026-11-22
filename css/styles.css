@@ -132,3 +132,69 @@ html, body {
 
 .custom-city-label { pointer-events: none; }
 .station-val-label { pointer-events: none; }
+
+.city-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    transform: translate(-4px, -50%);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.015em;
+    pointer-events: none;
+    user-select: none;
+}
+
+.city-lbl-t1 {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.city-lbl-t2 {
+    font-size: 10.5px;
+    font-weight: 500;
+    opacity: 0.92;
+}
+
+.city-dot {
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.city-lbl-t1 .city-dot {
+    width: 4.5px;
+    height: 4.5px;
+}
+
+.city-lbl-t2 .city-dot {
+    width: 3px;
+    height: 3px;
+}
+
+.city-lbl-dark {
+    color: #f8fafc;
+    text-shadow: 0 0 3px rgba(2, 6, 23, 0.95), 0 1px 4px rgba(2, 6, 23, 0.9), 0 0 6px rgba(2, 6, 23, 0.8);
+}
+
+.city-lbl-dark .city-dot {
+    background: #f8fafc;
+    box-shadow: 0 0 2px rgba(2, 6, 23, 0.95);
+}
+
+.city-lbl-light {
+    color: #0f172a;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.98), 0 0 5px rgba(255, 255, 255, 0.95), 0 1px 2px rgba(255, 255, 255, 0.95);
+}
+
+.city-lbl-light .city-dot {
+    background: #0f172a;
+    box-shadow: 0 0 2px rgba(255, 255, 255, 0.95);
+}
+
+.esri-ref-labels-dark {
+    filter: brightness(2.6) contrast(1.4) drop-shadow(0 0 2px rgba(2, 6, 23, 0.95)) drop-shadow(0 0 1px rgba(2, 6, 23, 0.95));
+}
+
+.esri-ref-labels-light {
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.95));
+}

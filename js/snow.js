@@ -1,15 +1,22 @@
-// js/snow.js - Moduł analizy pokrywy śnieżnej IMGW-PIB
-// Źródło biuletynu: https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf
+// js/snow.js - Modul analizy pokrywy snieznej IMGW-PIB
+// Zrodlo biuletynu: https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf
 
 (function() {
-    let _snowCache = null;
-    let _snowCacheTime = 0;
-    const CACHE_TTL = 3600000;
+    let _snowCache = null, _snowCacheTime = 0, _snowCacheDate = '';
+    const FRESH_CACHE_TTL = 1800000, STALE_RETRY_TTL = 120000, PDF_TIMEOUT_MS = 15000;
 
     const GATUNKI_SNIEGU = {
         1: 'puszysty, świeży', 2: 'krupiasty, sypki', 3: 'zsiadły lub przewiany', 4: 'zbity', 5: 'mokry (lepki)',
         6: 'powierzchnia zlodowaciała (szreń)', 7: 'powierzchnia zlodowaciała (lodoszreń)', 8: 'ziarnista', 9: 'warstwa szadzi > 2cm'
     };
+
+    function getTodayPlDateStr() {
+        const p = new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).formatToParts(new Date());
+        const g = t => p.find(x => x.type === t)?.value || '';
+        return `${g('day')}.${g('month')}.${g('year')}`;
+    }
+
+    const isBulletinFromToday = dateStr => Boolean(dateStr) && dateStr === getTodayPlDateStr();
 
     async function ensurePdfJs() {
         if (window.pdfjsLib) return;
@@ -17,9 +24,7 @@
             const s = document.createElement('script');
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
             s.onload = () => {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                }
+                if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                 resolve();
             };
             s.onerror = reject;
@@ -27,31 +32,33 @@
         });
     }
 
+    // Pobiera surowy bufor PDF z cache: 'no-store' i losowym parametrem, aby ominac max-age=31536000 po stronie IMGW
     async function extractTextFromPdf(pdfUrl) {
         await ensurePdfJs();
-        const doc = await window.pdfjsLib.getDocument({
-            url: pdfUrl,
-            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-            cMapPacked: true
-        }).promise;
-
-        let fullText = '';
-        for (let p = 1; p <= doc.numPages; p++) {
-            const page = await doc.getPage(p);
-            const content = await page.getTextContent();
-            fullText += content.items.map(item => item.str).join(' ') + '\n';
+        const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), PDF_TIMEOUT_MS);
+        try {
+            const resp = await fetch(pdfUrl, { cache: 'no-store', signal: ctrl.signal });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const doc = await window.pdfjsLib.getDocument({
+                data: new Uint8Array(await resp.arrayBuffer()),
+                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                cMapPacked: true
+            }).promise;
+            let fullText = '';
+            for (let p = 1; p <= doc.numPages; p++) {
+                const content = await (await doc.getPage(p)).getTextContent();
+                fullText += content.items.map(item => item.str).join(' ') + '\n';
+            }
+            return fullText;
+        } finally {
+            clearTimeout(timer);
         }
-        return fullText;
     }
 
     function assignSnowValue(state, val, hasDot) {
-        if (state.gatunek === null && state.swiezy === null) {
-            state.swiezy = val;
-        } else if (hasDot && state.obciazenie === 0) {
-            state.obciazenie = val;
-        } else if (!hasDot && state.zapas === null) {
-            state.zapas = val;
-        }
+        if (state.gatunek === null && state.swiezy === null) state.swiezy = val;
+        else if (hasDot && state.obciazenie === 0) state.obciazenie = val;
+        else if (!hasDot && state.zapas === null) state.zapas = val;
     }
 
     function updateSnowState(state, token) {
@@ -96,7 +103,6 @@
         const norma = meta.norma || 1.0;
         const procNormy = norma > 0 ? Math.round((parsed.obciazenie / norma) * 100) : 0;
         const gatunekOpis = parsed.gatunek ? (GATUNKI_SNIEGU[parsed.gatunek] || 'określony') : 'brak';
-
         return { ...meta, ...parsed, gatunek_kod: parsed.gatunek, gatunek_opis: gatunekOpis, procent_normy: procNormy, data: reportDate };
     }
 
@@ -107,35 +113,30 @@
     }
 
     async function fetchPdfSnowRecords(stationsMeta) {
-        try {
-            const pdfPromise = extractTextFromPdf('https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf');
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500));
-            const pdfText = await Promise.race([pdfPromise, timeoutPromise]);
-            if (pdfText && pdfText.length > 500 && stationsMeta.length > 0) {
-                return parseSnowRecords(pdfText, stationsMeta);
-            }
-        } catch (_) {}
+        const base = 'https://res4.imgw.pl/products/hydro/monitor-lite-products/Pokrywa_sniezna.pdf';
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const pdfText = await extractTextFromPdf(`${base}?cb=${Date.now()}_${attempt}`);
+                if (pdfText && pdfText.length > 500 && stationsMeta.length > 0) return parseSnowRecords(pdfText, stationsMeta);
+            } catch (_) {}
+        }
         return [];
     }
 
-    async function fetchFallbackSnowRecords() {
-        return fetch('dane/snow_latest.json')
-            .then(r => r.ok ? r.json() : { stacje: [] })
-            .then(d => d.stacje || [])
-            .catch(() => []);
-    }
+    const fetchFallbackSnowRecords = () => fetch(`dane/snow_latest.json?cb=${Date.now()}`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : { stacje: [] }).then(d => d.stacje || []).catch(() => []);
 
-    async function fetchSnowRecords() {
+    async function fetchSnowRecords(forceRefresh = false) {
         const now = Date.now();
-        if (_snowCache && (now - _snowCacheTime < CACHE_TTL)) return _snowCache;
-
-        const stationsMeta = await fetch('dane/snow_stations.json').then(r => r.ok ? r.json() : []).catch(() => []);
+        if (!forceRefresh && _snowCache?.length && (now - _snowCacheTime < (isBulletinFromToday(_snowCacheDate) ? FRESH_CACHE_TTL : STALE_RETRY_TTL))) {
+            return _snowCache;
+        }
+        const stationsMeta = await fetch('dane/snow_stations.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : []).catch(() => []);
         let records = await fetchPdfSnowRecords(stationsMeta);
+        if (!records.length && _snowCache?.length) { _snowCacheTime = now; return _snowCache; }
         if (!records.length) records = await fetchFallbackSnowRecords();
-
         if (records?.length > 0) {
-            _snowCache = records;
-            _snowCacheTime = now;
+            _snowCache = records; _snowCacheTime = now; _snowCacheDate = records.find(r => r.data)?.data || '';
         }
         return records;
     }
@@ -150,15 +151,15 @@
 
     function createSnowTooltip(r, nazwa, dateStr, swiezyVal) {
         const alt = r.alt || '-';
-        const zapasTxt = r.zapas != null ? `${r.zapas} mm` : 'brak';
+        const zapasTxt = r.zapas != null ? `${Math.round(r.zapas)} mm` : 'brak';
         const obcTxt = (r.obciazenie || 0).toFixed(3);
         const normaTxt = `${r.norma || '-'} kN/m² (${r.procent_normy || 0}% normy)`;
-        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${nazwa}</b> [${r.woj || ''}, ${alt} m n.p.m.]<span class="badge-odczyt">ODCZYT</span></div>Pokrywa śnieżna: <b>${(r.grubosc || 0).toFixed(1)} cm</b>${dateStr}<br>Świeży śnieg: <b>${swiezyVal.toFixed(1)} cm</b><br>Gatunek śniegu: <b>${r.gatunek_opis || '-'}</b><br>Zapas wody: <b>${zapasTxt}</b><br>Obciążenie: <b>${obcTxt} kN/m²</b><br>Norma: <b>${normaTxt}</b>`;
+        return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;"><b style="font-size:0.85rem;">${nazwa}</b> [${r.woj || ''}, ${alt} m n.p.m.]<span class="badge-odczyt">ODCZYT</span></div>Pokrywa śnieżna: <b>${Math.round(r.grubosc || 0)} cm</b>${dateStr}<br>Świeży śnieg: <b>${Math.round(swiezyVal)} cm</b><br>Gatunek śniegu: <b>${r.gatunek_opis || '-'}</b><br>Zapas wody: <b>${zapasTxt}</b><br>Obciążenie: <b>${obcTxt} kN/m²</b><br>Norma: <b>${normaTxt}</b>`;
     }
 
     function appendSnowStationData(r, dataObj) {
-        const lat = r.lat, lon = r.lon, nazwa = r.name, grubosc = r.grubosc || 0;
-        const zapas = r.zapas, obciazenie = r.obciazenie || 0, proc = r.procent_normy || 0;
+        const lat = r.lat, lon = r.lon, nazwa = r.name, grubosc = Math.round(r.grubosc || 0);
+        const zapas = r.zapas, obciazenie = r.obciazenie || 0, proc = Math.round(r.procent_normy || 0);
         const dateStr = r.data ? ` (${r.data})` : '';
         const { timeMs, isoDate } = parseReportTime(r.data);
 
@@ -167,7 +168,7 @@
             dataObj.snieg_swiezy.latestTimeMs = timeMs;
         }
 
-        const swiezyVal = (r.swiezy != null && !isNaN(r.swiezy)) ? r.swiezy : 0;
+        const swiezyVal = (r.swiezy != null && !isNaN(r.swiezy)) ? Math.round(r.swiezy) : 0;
         const metaItem = { id: String(r.kod || r.id || ''), nazwa, zrodlo: 'SNIEG', czas: isoDate };
         const hov = createSnowTooltip(r, nazwa, dateStr, swiezyVal);
 
@@ -177,15 +178,18 @@
             dataObj[p].pt_foreign.push(false); dataObj[p].pt_types.push('ODCZYT'); dataObj[p].pt_meta.push(metaItem);
         };
 
-        addPt('snieg', grubosc, `${grubosc.toFixed(1)}cm`);
-        addPt('snieg_swiezy', swiezyVal, `${swiezyVal.toFixed(1)}cm`);
-        if (zapas != null) addPt('snieg_zapas', zapas, `${zapas}mm`);
+        addPt('snieg', grubosc, `${grubosc}`);
+        addPt('snieg_swiezy', swiezyVal, `${swiezyVal}`);
+        if (zapas != null) addPt('snieg_zapas', zapas, `${Math.round(zapas)}`);
         addPt('snieg_obciazenie', obciazenie, obciazenie.toFixed(2));
-        addPt('snieg_norma', proc, `${proc}%`);
+        addPt('snieg_norma', proc, `${proc}`);
     }
 
-    window.getSnowData = async function() {
-        const records = await fetchSnowRecords();
+    window.isSnowCacheStale = () => Boolean(_snowCache?.length) && !isBulletinFromToday(_snowCacheDate);
+    window.invalidateSnowCache = () => { _snowCache = null; _snowCacheTime = 0; _snowCacheDate = ''; };
+
+    window.getSnowData = async function(forceRefresh = false) {
+        const records = await fetchSnowRecords(forceRefresh);
         const makeP = () => ({ pt_lats: [], pt_lons: [], pt_vals: [], pt_dirs: [], pt_txts: [], pt_hov: [], pt_foreign: [], pt_types: [], pt_meta: [], latestTimeMs: 0 });
         const dataObj = { snieg: makeP(), snieg_swiezy: makeP(), snieg_zapas: makeP(), snieg_obciazenie: makeP(), snieg_norma: makeP() };
         records.forEach(r => appendSnowStationData(r, dataObj));

@@ -1,73 +1,85 @@
 // js/map/layers.js
-// Menedżer warstw mapy, kolejność Z-Index, widoczność i przezroczystość
+// Menedzer warstw rastrowych (Radar, Interpolacja, Satelita) oraz warstwa granic administracyjnych
 
 export const DEFAULT_MAP_LAYERS = {
-    boundaries: { id: 'boundaries', name: 'Granice', visible: true, opacity: 100, pane: 'boundariesPane' },
-    drawings:   { id: 'drawings',   name: 'Rysowanie', visible: false, opacity: 100, pane: 'drawingsPane' },
-    stations:   { id: 'stations',   name: 'Stacje', visible: true, opacity: 100, pane: 'stationsPane' },
-    lightning:  { id: 'lightning',  name: 'Wyładowania', visible: true, opacity: 95, pane: 'lightningPane' },
-    radar:      { id: 'radar',      name: 'Radar', visible: false, opacity: 68, pane: 'radarPane' },
-    inter:      { id: 'inter',      name: 'Interpolacja', visible: true, opacity: 88, pane: 'weatherPane' },
-    satellite:  { id: 'satellite',  name: 'Satelita', visible: true, opacity: 68, pane: 'satellitePane' }
+    radar:     { id: 'radar',     name: 'Radar', visible: false, opacity: 68, pane: 'radarPane' },
+    inter:     { id: 'inter',     name: 'Interpolacja', visible: true, opacity: 88, pane: 'weatherPane' },
+    satellite: { id: 'satellite', name: 'Satelita', visible: true, opacity: 68, pane: 'satellitePane' }
 };
-export const DEFAULT_LAYER_ORDER = ['boundaries', 'drawings', 'stations', 'lightning', 'radar', 'inter', 'satellite'];
+export const DEFAULT_LAYER_ORDER = ['radar', 'inter', 'satellite'];
 
+const STORAGE_LAYERS_KEY = 'meteo_map_layers_v7', STORAGE_ORDER_KEY = 'meteo_map_order_v7';
 let boundariesLayerGroup = null, countriesGeoLayer = null, provincesGeoLayer = null, isCurrentThemeLight = false;
 
+function getBoundaryColors(isLight) {
+    return isLight
+        ? { country: 'rgba(15, 23, 42, 0.82)', province: 'rgba(51, 65, 85, 0.55)' }
+        : { country: 'rgba(241, 245, 249, 0.78)', province: 'rgba(226, 232, 240, 0.42)' };
+}
+
 export function initBoundaries(map) {
-    map.createPane('boundariesPane');
-    map.getPane('boundariesPane').style.zIndex = 500;
-    map.getPane('boundariesPane').style.pointerEvents = 'none';
+    if (!map.getPane('boundariesPane')) {
+        map.createPane('boundariesPane');
+        map.getPane('boundariesPane').style.zIndex = 395;
+        map.getPane('boundariesPane').style.pointerEvents = 'none';
+    }
     boundariesLayerGroup = L.layerGroup([], { pane: 'boundariesPane' });
 
     const loadGeo = (url, weight, dash, isProv) => fetch(url).then(r => r.json()).then(data => {
-        const color = isCurrentThemeLight ? (isProv ? 'rgba(51,65,85,0.65)' : 'rgba(15,23,42,0.85)') : (isProv ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.75)');
-        const lyr = L.geoJSON(data, { pane: 'boundariesPane', style: { color, weight, dashArray: dash, fill: false, interactive: false } }).addTo(boundariesLayerGroup);
+        const cols = getBoundaryColors(isCurrentThemeLight);
+        const style = { color: isProv ? cols.province : cols.country, weight, dashArray: dash || null, fill: false, interactive: false };
+        const lyr = L.geoJSON(data, { pane: 'boundariesPane', style }).addTo(boundariesLayerGroup);
         if (isProv) provincesGeoLayer = lyr; else countriesGeoLayer = lyr;
-    }).catch(err => console.error("Błąd granic:", err));
+    }).catch(err => console.error('Błąd granic:', err));
 
-    loadGeo('assets/geo/europe_countries.json', 1.5, '4, 4', false);
-    loadGeo('assets/geo/wojewodztwa.geojson', 1.1, '2, 3', true);
+    // Granice panstw Eurostat GISCO 1:1M (ciagla linia) + wewnetrzne granice wojewodztw (przerywana, brak podwojnych linii)
+    loadGeo('assets/geo/europe_countries.json', 1.35, null, false);
+    loadGeo('assets/geo/wojewodztwa.geojson', 0.95, '3, 3', true);
 
+    window.boundariesLayerGroup = boundariesLayerGroup;
     window.updateBoundariesStyle = (isLight) => {
-        isCurrentThemeLight = isLight;
-        countriesGeoLayer?.setStyle({ color: isLight ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.75)' });
-        provincesGeoLayer?.setStyle({ color: isLight ? 'rgba(51, 65, 85, 0.65)' : 'rgba(255, 255, 255, 0.45)' });
+        isCurrentThemeLight = Boolean(isLight);
+        const cols = getBoundaryColors(isCurrentThemeLight);
+        countriesGeoLayer?.setStyle({ color: cols.country });
+        provincesGeoLayer?.setStyle({ color: cols.province });
     };
+    window.updateBoundariesVisibility = () => {
+        const show = document.getElementById('chk-boundaries')?.checked ?? true;
+        if (show && !map.hasLayer(boundariesLayerGroup)) map.addLayer(boundariesLayerGroup);
+        if (!show && map.hasLayer(boundariesLayerGroup)) map.removeLayer(boundariesLayerGroup);
+    };
+
+    if (document.getElementById('chk-boundaries')?.checked ?? true) {
+        boundariesLayerGroup.addTo(map);
+    }
     return boundariesLayerGroup;
 }
 
 function loadSavedLayerState() {
     try {
-        const savedLayers = JSON.parse(localStorage.getItem('meteo_map_layers_v6') || '{}');
+        const savedLayers = JSON.parse(localStorage.getItem(STORAGE_LAYERS_KEY) || '{}');
         Object.keys(savedLayers).forEach(k => {
             if (window.MAP_LAYERS[k]) {
                 window.MAP_LAYERS[k].visible = savedLayers[k].visible;
                 window.MAP_LAYERS[k].opacity = savedLayers[k].opacity;
             }
         });
-        const savedOrder = JSON.parse(localStorage.getItem('meteo_map_order_v6') || '[]');
-        if (Array.isArray(savedOrder) && savedOrder.length === window.layerOrder.length) window.layerOrder = savedOrder;
+        const savedOrder = JSON.parse(localStorage.getItem(STORAGE_ORDER_KEY) || '[]');
+        const validOrder = Array.isArray(savedOrder)
+            && savedOrder.length === DEFAULT_LAYER_ORDER.length
+            && DEFAULT_LAYER_ORDER.every(k => savedOrder.includes(k));
+        if (validOrder) window.layerOrder = savedOrder;
     } catch (_) {}
 }
 
 function saveLayerState() {
     try {
-        localStorage.setItem('meteo_map_layers_v6', JSON.stringify(window.MAP_LAYERS));
-        localStorage.setItem('meteo_map_order_v6', JSON.stringify(window.layerOrder));
+        localStorage.setItem(STORAGE_LAYERS_KEY, JSON.stringify(window.MAP_LAYERS));
+        localStorage.setItem(STORAGE_ORDER_KEY, JSON.stringify(window.layerOrder));
     } catch (_) {}
 }
 
 const LAYER_TOGGLE_ACTIONS = {
-    drawings: (map, comp, chk) => {
-        const sec = document.getElementById('section-rysowanie');
-        if (sec) sec.style.display = chk ? 'block' : 'none';
-    },
-    boundaries: (map, comp, chk) => {
-        if (!boundariesLayerGroup) return;
-        if (chk && !map.hasLayer(boundariesLayerGroup)) map.addLayer(boundariesLayerGroup);
-        if (!chk && map.hasLayer(boundariesLayerGroup)) map.removeLayer(boundariesLayerGroup);
-    },
     satellite: (map, comp, chk) => {
         const sLay = comp.getActiveSatelliteLayer?.();
         if (chk && sLay && !map.hasLayer(sLay)) map.addLayer(sLay);
@@ -76,24 +88,17 @@ const LAYER_TOGGLE_ACTIONS = {
             if (comp.satelliteNightLayer && map.hasLayer(comp.satelliteNightLayer)) map.removeLayer(comp.satelliteNightLayer);
         }
     },
-    lightning: (map, comp, chk) => {
-        if (!comp.lightningGroup) return;
-        if (chk && !map.hasLayer(comp.lightningGroup)) map.addLayer(comp.lightningGroup);
-        if (!chk && map.hasLayer(comp.lightningGroup)) map.removeLayer(comp.lightningGroup);
-    },
     radar: (map, comp, chk) => {
         const overlay = comp.getRadarOverlay?.();
         if (!overlay) return;
         if (chk && !map.hasLayer(overlay)) map.addLayer(overlay);
         if (!chk && map.hasLayer(overlay)) map.removeLayer(overlay);
     },
-    inter: () => { if (typeof window.renderIMGW === 'function') window.renderIMGW(); },
-    stations: () => { if (typeof window.renderIMGW === 'function') window.renderIMGW(); }
+    inter: () => { if (typeof window.renderIMGW === 'function') window.renderIMGW(); }
 };
 
 const LAYER_OPACITY_ACTIONS = {
     satellite: (comp, op) => { comp.satelliteDayLayer?.setOpacity(op); comp.satelliteNightLayer?.setOpacity(op); },
-    boundaries: (comp, op) => { boundariesLayerGroup?.eachLayer(l => l.setStyle?.({ opacity: op })); },
     radar: (comp, op) => { comp.getRadarOverlay?.()?.setOpacity(op); },
     inter: (comp, op) => { window.idwOverlay?.setOpacity(op); }
 };
@@ -120,16 +125,15 @@ function renderLayerItem(key, idx, total) {
     const item = window.MAP_LAYERS[key];
     if (!item) return '';
     const isTop = idx === 0, isBottom = idx === total - 1;
-    const extra = key === 'lightning' ? ' <span id="bo-strike-count" style="font-size:0.65rem; color:#eab308;"></span>' : '';
     const ctrl = renderLayerControls(key);
 
     return `<div class="layer-item-card" style="background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:6px; padding:7px 10px; display:flex; flex-direction:column; gap:5px;">
         <div style="display:flex; align-items:center; justify-content:space-between;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600; cursor:pointer; margin:0; color:var(--text-primary);"><input type="checkbox" ${item.visible ? 'checked' : ''} onchange="window.toggleLayer('${key}', this.checked)"><span>${item.name}${extra}</span></label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600; cursor:pointer; margin:0; color:var(--text-primary);"><input type="checkbox" ${item.visible ? 'checked' : ''} onchange="window.toggleLayer('${key}', this.checked)"><span>${item.name}</span></label>
             <div style="display:flex; align-items:center; gap:3px;">
                 ${ctrl}
-                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);" title="Przesuń wyżej" onclick="window.moveLayer('${key}', 'up')" ${isTop ? 'disabled style="opacity:0.25; cursor:default;"' : ''}>▲</button>
-                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);" title="Przesuń niżej" onclick="window.moveLayer('${key}', 'down')" ${isBottom ? 'disabled style="opacity:0.25; cursor:default;"' : ''}>▼</button>
+                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);${isTop ? ' opacity:0.25; cursor:default;' : ''}" title="Przesuń wyżej" onclick="window.moveLayer('${key}', 'up')" ${isTop ? 'disabled' : ''}>▲</button>
+                <button class="btn btn-ghost" style="padding:2px 6px; font-size:0.75rem; border:1px solid var(--border-subtle);${isBottom ? ' opacity:0.25; cursor:default;' : ''}" title="Przesuń niżej" onclick="window.moveLayer('${key}', 'down')" ${isBottom ? 'disabled' : ''}>▼</button>
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:var(--text-muted);">
@@ -141,7 +145,8 @@ function renderLayerItem(key, idx, total) {
 }
 
 export function initLayerManager(map, components) {
-    window.MAP_LAYERS = { ...DEFAULT_MAP_LAYERS };
+    window.MAP_LAYERS = {};
+    Object.keys(DEFAULT_MAP_LAYERS).forEach(k => { window.MAP_LAYERS[k] = { ...DEFAULT_MAP_LAYERS[k] }; });
     window.layerOrder = [...DEFAULT_LAYER_ORDER];
     loadSavedLayerState();
 
@@ -189,9 +194,7 @@ export function initLayerManager(map, components) {
         container.innerHTML = window.layerOrder.map((k, i) => renderLayerItem(k, i, total)).join('');
     };
 
-    if (window.MAP_LAYERS['boundaries']?.visible && boundariesLayerGroup) boundariesLayerGroup.addTo(map);
-    if (window.MAP_LAYERS['satellite']?.visible) components.getActiveSatelliteLayer?.()?.addTo(map);
-
+    if (window.MAP_LAYERS.satellite?.visible) components.getActiveSatelliteLayer?.()?.addTo(map);
     window.applyLayerOrder();
     window.renderLayerManagerUI();
 }

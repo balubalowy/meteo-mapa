@@ -84,7 +84,7 @@ function extractIsoLabel(segs, T, step, unit, w, h) {
     });
     if (!cand.length) return [];
 
-    const labelTxt = Number(T).toFixed(step < 1 ? 1 : 0) + (unit || '');
+    const labelTxt = Number(T).toFixed(step < 1 ? 1 : 0);
     const mid = cand[Math.floor(cand.length / 2)];
     const lx = (mid[0].x + mid[1].x) * 0.5, ly = (mid[0].y + mid[1].y) * 0.5;
     const labels = [{ x: lx, y: ly, text: labelTxt }];

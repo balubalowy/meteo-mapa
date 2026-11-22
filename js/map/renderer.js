@@ -1,25 +1,31 @@
 // js/map/renderer.js
-// Renderowanie stacji, etykiet, wektorów wiatru oraz nakładki interpolacji IDW
+// Renderowanie stacji, etykiet, wektorow wiatru oraz nakladki interpolacji IDW i izobar
 
-import { DEFAULT_ZMIENNE, generateIDWImage, generateIsobarsOverlay, getColorRGBA } from './interpolation.js';
+import { COLORSCALES, DEFAULT_ZMIENNE, generateIDWImage, generateIsobarsOverlay, getColorRGBA } from './interpolation.js';
 import { getIMGWLiveData } from './stations.js';
 import { updateDelayBadge } from './ui.js';
 
 const ISO_STEPS = ['auto', 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 500, 1000];
+const TREND_RANGES = {
+    temp: { cscale: COLORSCALES.trend_temp, cmin: -4, cmax: 4, step: 0.5 },
+    grunt: { cscale: COLORSCALES.trend_temp, cmin: -5, cmax: 5, step: 0.5 },
+    rosy: { cscale: COLORSCALES.trend_temp, cmin: -4, cmax: 4, step: 0.5 },
+    wilg: { cscale: COLORSCALES.trend_humidity, cmin: -25, cmax: 25, step: 5 },
+    cisnienie: { cscale: COLORSCALES.trend_temp, cmin: -4, cmax: 4, step: 0.5 },
+    wiatr: { cscale: COLORSCALES.trend_temp, cmin: -25, cmax: 25, step: 5 },
+    wiatr_sr: { cscale: COLORSCALES.trend_temp, cmin: -20, cmax: 20, step: 5 }
+};
 
-let imgwLayerGroup = null;
-let idwOverlay = null;
-let isobarsOverlay = null;
+let imgwLayerGroup = null, idwOverlay = null, isobarsOverlay = null, renderSeq = 0;
 
 export function updateIsoStepLabel(sliderVal) {
-    const idx = parseInt(sliderVal, 10);
-    const step = ISO_STEPS[idx] ?? 'auto';
+    const step = ISO_STEPS[parseInt(sliderVal, 10)] ?? 'auto';
     const labelEl = document.getElementById('iso-step-val');
     if (!labelEl) return;
     if (step === 'auto') {
-        const curZ = document.getElementById('imgw-zmienna')?.value || 'temp';
-        const defStep = DEFAULT_ZMIENNE[curZ]?.step || 2;
-        labelEl.textContent = `Auto (${defStep})`;
+        const zm = document.getElementById('imgw-zmienna')?.value || 'temp';
+        const ok = document.getElementById('imgw-okres')?.value || 'now';
+        labelEl.textContent = `Auto (${resolveScaleConfig(zm, ok).step || 2})`;
     } else {
         labelEl.textContent = `${step}`;
     }
@@ -36,14 +42,22 @@ function resolveOkres() {
     return okres;
 }
 
+function resolveScaleConfig(zmienna, okres) {
+    const base = DEFAULT_ZMIENNE[zmienna] || DEFAULT_ZMIENNE.temp;
+    if (okres.startsWith('trend') && TREND_RANGES[zmienna]) {
+        return { ...base, ...TREND_RANGES[zmienna] };
+    }
+    return base;
+}
+
 function buildMarkerHtml(idx, data, cfg, ptColor) {
     const isForecast = data.pt_types?.[idx] === 'PROGNOZA';
     const suffix = isForecast ? '<span style="font-size:0.65rem; color:#60a5fa; vertical-align:top; margin-left:1px;">~</span>' : '';
     let html = cfg.showTxt ? `<div style="color: white; text-shadow: 0 0 3px black, 0 0 3px black; font-weight: bold;">${data.pt_txts[idx]}${suffix}</div>` : '';
 
     const isWind = (cfg.zmienna === 'wiatr' || cfg.zmienna === 'wiatr_sr');
-    const hasDir = !isNaN(data.pt_dirs?.[idx]) && data.pt_dirs?.[idx] !== null;
-    if (isWind && !cfg.okres.startsWith('trend') && hasDir) {
+    const hasDir = !isNaN(data.pt_dirs?.[idx]) && data.pt_dirs?.[idx] !== null && data.pt_vals[idx] > 0;
+    if (cfg.showPt && isWind && !cfg.okres.startsWith('trend') && hasDir) {
         const dir = data.pt_dirs[idx] + 180;
         html += `<div style="width:18px; height:18px; margin:2px auto; transform: rotate(${dir}deg); color: ${ptColor}; text-shadow: 0 0 2px black;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 0px 1px black);">
@@ -52,8 +66,8 @@ function buildMarkerHtml(idx, data, cfg, ptColor) {
             </svg>
         </div>`;
     } else if (cfg.showPt) {
-        const border = isForecast ? '2px dashed #60a5fa' : '1px solid rgba(255,255,255,0.7)';
-        html += `<div style="width:10px;height:10px;background:${ptColor};border-radius:50%;margin:2px auto;box-shadow:0 0 2px black; border:${border};"></div>`;
+        const border = isForecast ? '2px dashed #60a5fa' : '1px solid rgba(255,255,255,0.75)';
+        html += `<div style="width:9px;height:9px;background:${ptColor};border-radius:50%;margin:2px auto;box-shadow:0 0 2px black; border:${border};"></div>`;
     }
     return html;
 }
@@ -63,7 +77,9 @@ function renderMarkers(data, cfg) {
         if (data.pt_foreign?.[i] && !cfg.showForeign) continue;
 
         const val = data.pt_vals[i];
-        const ptColor = `rgb(${getColorRGBA(val, cfg.scale, cfg.cmin, cfg.cmax).slice(0, 3).join(',')})`;
+        const rgba = getColorRGBA(val, cfg.scale, cfg.cmin, cfg.cmax);
+        // Dla wartosci zerowych/przezroczystych (np. brak sniegu, cisza) kropka stacji pozostaje subtelnie widoczna
+        const ptColor = rgba[3] < 25 ? 'rgba(203,213,225,0.65)' : `rgb(${rgba[0]},${rgba[1]},${rgba[2]})`;
         const html = buildMarkerHtml(i, data, cfg, ptColor);
 
         const icon = L.divIcon({ className: 'imgw-station-marker', html, iconSize: [30, 25], iconAnchor: [15, 12] });
@@ -100,22 +116,17 @@ async function fetchParamData(okres, zmienna, loadingEl) {
         const live = await getIMGWLiveData(zmienna);
         return live ? live[zmienna] : null;
     }
-    if (typeof window.getIMGWHistoryData === 'function') {
-        if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<i data-lucide="loader" class="spin"></i> Obliczanie trendu z bazy...'; }
-        try {
-            return await window.getIMGWHistoryData(zmienna, okres);
-        } catch (_) {
-            return null;
-        } finally {
-            if (loadingEl) loadingEl.style.display = 'none';
-        }
-    }
-    return null;
+    if (typeof window.getIMGWHistoryData !== 'function') return null;
+    if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.innerHTML = '<i data-lucide="loader" class="spin"></i> Obliczanie trendu z bazy...'; }
+    try { return await window.getIMGWHistoryData(zmienna, okres); }
+    catch (_) { return null; }
+    finally { if (loadingEl) loadingEl.style.display = 'none'; }
 }
 
-async function renderIsobarsOverlay(map, showForeign) {
+async function renderIsobarsOverlay(map, showForeign, seq) {
     try {
         const live = await getIMGWLiveData('cisnienie');
+        if (seq !== renderSeq) return;
         const pData = live?.cisnienie;
         if (!pData?.pt_lats?.length || pData.pt_lats.length < 5) return;
         const pts = filterIdwPoints(pData, showForeign);
@@ -131,38 +142,39 @@ async function renderIsobarsOverlay(map, showForeign) {
 
 export async function renderIMGW(map) {
     if (!imgwLayerGroup) imgwLayerGroup = L.layerGroup().addTo(map);
-
-    const okres = resolveOkres();
-    const zmienna = document.getElementById('imgw-zmienna')?.value || 'temp';
+    const seq = ++renderSeq;
+    const okres = resolveOkres(), zmienna = document.getElementById('imgw-zmienna')?.value || 'temp';
     const data = await fetchParamData(okres, zmienna, document.getElementById('imgw-loading'));
+    if (seq !== renderSeq) return;
 
     imgwLayerGroup.clearLayers();
     if (idwOverlay) { map.removeLayer(idwOverlay); idwOverlay = null; window.idwOverlay = null; }
     if (isobarsOverlay) { map.removeLayer(isobarsOverlay); isobarsOverlay = null; window.isobarsOverlay = null; }
-    if (!data?.pt_lats?.length) return;
-
-    window.currentRenderedData = data;
     window.currentRenderedParam = zmienna;
     window.currentRenderedOkres = okres;
-
-    const zInfo = DEFAULT_ZMIENNE[zmienna] || DEFAULT_ZMIENNE['temp'];
-    const curParamName = zInfo.nazwa || zmienna;
-    if (data.latestTimeMs > 0) {
-        window.currentDisplayedTimeMs = data.latestTimeMs;
-        window.currentDisplayedParamName = curParamName;
-        updateDelayBadge(data.latestTimeMs, curParamName);
-    } else {
+    if (!data?.pt_lats?.length) {
+        window.currentRenderedData = null;
         window.currentDisplayedTimeMs = 0;
-        updateDelayBadge(0, curParamName);
+        updateDelayBadge(0, zmienna);
+        window.updateExportMetaBadge?.(null);
+        return;
     }
 
-    const showStations = window.MAP_LAYERS?.stations?.visible ?? true;
+    window.currentRenderedData = data;
+    window.updateExportMetaBadge?.(data);
+
+    const zInfo = resolveScaleConfig(zmienna, okres);
+    const curParamName = zInfo.nazwa || zmienna;
+    window.currentDisplayedTimeMs = data.latestTimeMs > 0 ? data.latestTimeMs : 0;
+    window.currentDisplayedParamName = curParamName;
+    updateDelayBadge(window.currentDisplayedTimeMs, curParamName);
+
     const showInter = window.MAP_LAYERS?.inter?.visible ?? true;
     const showTxt = document.getElementById('chk-txt')?.checked ?? true;
-    const showPt = document.getElementById('chk-pt')?.checked ?? false;
+    const showPt = document.getElementById('chk-pt')?.checked ?? true;
     const showForeign = document.getElementById('chk-foreign')?.checked ?? false;
 
-    if (showStations && (showTxt || showPt)) {
+    if (showTxt || showPt) {
         renderMarkers(data, { zmienna, okres, scale: zInfo.cscale, cmin: zInfo.cmin, cmax: zInfo.cmax, showTxt, showPt, showForeign });
     }
 
@@ -171,18 +183,18 @@ export async function renderIMGW(map) {
         const rawStep = isoSlider ? (ISO_STEPS[parseInt(isoSlider.value, 10)] ?? 'auto') : 'auto';
         const stepVal = rawStep !== 'auto' ? parseFloat(rawStep) : (zInfo.step || 2.0);
         const showIso = document.getElementById('chk-iso')?.checked ?? false;
-        const opacityBg = (window.MAP_LAYERS?.inter?.opacity ?? 70) / 100.0;
+        const opacityBg = (window.MAP_LAYERS?.inter?.opacity ?? 88) / 100.0;
 
         const pts = filterIdwPoints(data, showForeign);
         const hasForeign = showForeign && data.pt_foreign?.some(Boolean);
         const { geoBounds, layerBounds } = getIdwBounds(hasForeign);
 
-        const dataUrl = generateIDWImage(pts.lats, pts.lons, pts.vals, zInfo.cscale, zInfo.cmin, zInfo.cmax, showIso, stepVal, zInfo.unit, geoBounds, !hasForeign);
+        const dataUrl = generateIDWImage(pts.lats, pts.lons, pts.vals, zInfo.cscale, zInfo.cmin, zInfo.cmax, showIso, stepVal, '', geoBounds, !hasForeign);
         idwOverlay = L.imageOverlay(dataUrl, layerBounds, { opacity: opacityBg, pane: 'weatherPane' }).addTo(map);
         window.idwOverlay = idwOverlay;
     }
 
     if (document.getElementById('chk-isobars')?.checked) {
-        await renderIsobarsOverlay(map, showForeign);
+        await renderIsobarsOverlay(map, showForeign, seq);
     }
 }

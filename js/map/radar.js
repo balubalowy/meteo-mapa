@@ -21,12 +21,11 @@ export function getIMGWRadarColor(dbz) {
 }
 
 function generateImgwRadarFrames() {
-    const now = new Date();
-    const frames = [];
+    const now = new Date(), frames = [], pad = n => String(n).padStart(2, '0');
     for (let i = 47; i >= 0; i--) {
-        const d = new Date(now.getTime() - (i * 5 + 3) * 60000);
-        const pad = n => String(n).padStart(2, '0');
-        const ts = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(Math.floor(d.getUTCMinutes() / 5) * 5)}`;
+        const d = new Date(now.getTime() - (i * 5 + 6) * 60000);
+        d.setUTCMinutes(Math.floor(d.getUTCMinutes() / 5) * 5, 0, 0);
+        const ts = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
         const label = fmtPlTime(d);
         const url = `https://danepubliczne.imgw.pl/pl/datastore/getfiledown/Oper/Polrad/Produkty/POLCOMP/COMPO_CMAX_250.comp.cmax/${ts}0000dBZ.cmax_echoOnly.png`;
         if (!frames.some(f => f.ts === ts)) {
@@ -51,6 +50,15 @@ function syncSatelliteTime(timeUnixSec) {
 function renderImgwFrame(map, frame, opacity) {
     if (!imgwRadarOverlay) {
         imgwRadarOverlay = L.imageOverlay(frame.url, IMGW_RADAR_BOUNDS, { opacity, pane: 'radarPane' });
+        imgwRadarOverlay.on('error', () => {
+            // Jesli najnowsza klatka IMGW nie jest jeszcze opublikowana, cofnij o jedna klatke (maks. 3 kroki)
+            if (activeRadarSource === 'imgw' && currentFrame > Math.max(0, imgwFrames.length - 4)) {
+                const slider = document.getElementById('rv-slider');
+                currentFrame = currentFrame - 1;
+                if (slider) slider.value = currentFrame;
+                showRadarFrame(map, currentFrame);
+            }
+        });
     } else {
         imgwRadarOverlay.setUrl(frame.url);
         imgwRadarOverlay.setOpacity(opacity);
@@ -89,17 +97,10 @@ export function showRadarFrame(map, index) {
     }
 }
 
-function createSatelliteLayers(map) {
-    satelliteDayLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', {
-        layers: 'msg_fes:rgb_eview', format: 'image/png', transparent: true,
-        opacity: 0.68, pane: 'satellitePane', maxNativeZoom: 7, maxZoom: 18, attribution: 'EUMETSAT HRV'
-    });
-    map.createPane('satelliteNightPane');
-    map.getPane('satelliteNightPane').style.zIndex = 250;
-    satelliteNightLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', {
-        layers: 'mtg_fd:ir105_hrfi', format: 'image/png', transparent: true,
-        opacity: 0.52, pane: 'satelliteNightPane', maxNativeZoom: 7, maxZoom: 18, attribution: 'EUMETSAT MTG-IR'
-    });
+function createSatelliteLayers() {
+    const baseOpts = { format: 'image/png', transparent: true, opacity: 0.68, pane: 'satellitePane', maxNativeZoom: 7, maxZoom: 18 };
+    satelliteDayLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', { ...baseOpts, layers: 'msg_fes:rgb_eview', attribution: 'EUMETSAT MSG RGB' });
+    satelliteNightLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', { ...baseOpts, layers: 'mtg_fd:ir105_hrfi', attribution: 'EUMETSAT MTG-IR' });
 }
 
 function setupRadarControls(map) {
@@ -131,7 +132,7 @@ function setupRadarControls(map) {
 
 export function initRadar(map) {
     imgwFrames = generateImgwRadarFrames();
-    createSatelliteLayers(map);
+    createSatelliteLayers();
 
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(res => res.json())

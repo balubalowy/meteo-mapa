@@ -1,15 +1,24 @@
 // js/mapa.js
-// Główny punkt wejścia aplikacji B-Mapa - orkiestracja modułów
+// Glowny punkt wejscia aplikacji B-Mapa - orkiestracja modulow
 
 import { initMap } from './map/core.js';
 import { initGeoman } from './map/drawing.js';
 import { initRadar } from './map/radar.js';
-import { initLightning } from './map/blitzortung.js';
 import { initBoundaries, initLayerManager } from './map/layers.js';
 import { renderIMGW, updateIsoStepLabel } from './map/renderer.js';
 import { initUIControls } from './map/ui.js';
 
 let activeMapInstance = null;
+
+function setupStaleSnowAutoRefresh() {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || !window.isSnowCacheStale?.()) return;
+        window.invalidateSnowCache?.();
+        window.BMapaApi?.clearLiveCache?.();
+        const param = document.getElementById('imgw-zmienna')?.value;
+        if (param === 'snieg' || param === 'snieg_swiezy') window.renderIMGW?.();
+    });
+}
 
 export function initMapa() {
     const { map, basemaps } = initMap('premium-map');
@@ -18,10 +27,10 @@ export function initMapa() {
     initGeoman(map);
     const radarComponents = initRadar(map);
     const boundariesGroup = initBoundaries(map);
-    const lightningGroup = initLightning(map);
 
-    initLayerManager(map, { ...radarComponents, boundariesGroup, lightningGroup });
+    initLayerManager(map, { ...radarComponents, boundariesGroup });
     initUIControls(map);
+    setupStaleSnowAutoRefresh();
 
     window.renderIMGW = () => renderIMGW(map);
     window.updateIsoStepLabel = updateIsoStepLabel;

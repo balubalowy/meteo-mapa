@@ -1,38 +1,19 @@
 // js/map/core.js
-// Inicjalizacja instancji mapy Leaflet, pane'ów Z-Index oraz warstw bazowych
+// Inicjalizacja instancji mapy Leaflet, pane'ow Z-Index oraz podkladow kartograficznych
 
-const MAJOR_CITIES = [
-    { name: "Warszawa", lat: 52.2297, lon: 21.0122 },
-    { name: "Kraków", lat: 50.0647, lon: 19.9450 },
-    { name: "Łódź", lat: 51.7592, lon: 19.4560 },
-    { name: "Wrocław", lat: 51.1079, lon: 17.0385 },
-    { name: "Poznań", lat: 52.4064, lon: 16.9252 },
-    { name: "Gdańsk", lat: 54.3520, lon: 18.6466 },
-    { name: "Szczecin", lat: 53.4285, lon: 14.5528 },
-    { name: "Bydgoszcz", lat: 53.1235, lon: 18.0084 },
-    { name: "Lublin", lat: 51.2465, lon: 22.5684 },
-    { name: "Białystok", lat: 53.1325, lon: 23.1688 },
-    { name: "Katowice", lat: 50.2649, lon: 19.0238 },
-    { name: "Rzeszów", lat: 50.0412, lon: 21.9991 },
-    { name: "Olsztyn", lat: 53.7799, lon: 20.4942 },
-    { name: "Kielce", lat: 50.8661, lon: 20.6286 },
-    { name: "Opole", lat: 50.6711, lon: 17.9253 },
-    { name: "Zielona Góra", lat: 51.9355, lon: 15.5062 },
-    { name: "Toruń", lat: 53.0137, lon: 18.5984 },
-    { name: "Gorzów Wlkp.", lat: 52.7368, lon: 15.2288 }
-];
+import { createCityLabelsGroup } from './cities.js';
 
-// Utworzenie dedykowanych pane'ów w celu rygorystycznej kontroli kolejności nakładania warstw
+// Utworzenie dedykowanych pane'ow w celu rygorystycznej kontroli kolejnosci nakladania warstw
 export function setupPanes(map) {
     const panesConfig = [
         { name: 'basePane', zIndex: 200, pointerEvents: 'auto' },
-        { name: 'satellitePane', zIndex: 260, pointerEvents: 'auto' },
-        { name: 'weatherPane', zIndex: 290, pointerEvents: 'auto' },
-        { name: 'isobarsPane', zIndex: 305, pointerEvents: 'none' },
-        { name: 'radarPane', zIndex: 320, pointerEvents: 'auto' },
-        { name: 'lightningPane', zIndex: 350, pointerEvents: 'auto' },
+        { name: 'satellitePane', zIndex: 250, pointerEvents: 'auto' },
+        { name: 'weatherPane', zIndex: 280, pointerEvents: 'auto' },
+        { name: 'radarPane', zIndex: 310, pointerEvents: 'auto' },
+        { name: 'isobarsPane', zIndex: 365, pointerEvents: 'none' },
         { name: 'drawingsPane', zIndex: 380, pointerEvents: 'auto' },
-        { name: 'stationsPane', zIndex: 410, pointerEvents: 'auto' },
+        { name: 'boundariesPane', zIndex: 395, pointerEvents: 'none' },
+        { name: 'stationsPane', zIndex: 420, pointerEvents: 'auto' },
         { name: 'labelsPane', zIndex: 650, pointerEvents: 'none' }
     ];
 
@@ -44,59 +25,54 @@ export function setupPanes(map) {
     });
 }
 
-// Inicjalizacja etykiet miast z dostosowaniem kontrastu do jasnego/ciemnego podkładu
-export function createCityLabelsGroup(map) {
-    const group = L.layerGroup();
-
-    function updateCityLabels(isLight) {
-        group.clearLayers();
-        const textCol = isLight ? '#0f172a' : '#ffffff';
-        const shadowCol = isLight ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.95)';
-
-        MAJOR_CITIES.forEach(city => {
-            const icon = L.divIcon({
-                className: 'custom-city-label',
-                html: `<div style="font-weight: bold; font-size: 0.85rem; color: ${textCol}; text-shadow: 0 0 3px ${shadowCol}, 0 0 4px ${shadowCol}, 0 0 5px ${shadowCol}; white-space: nowrap; pointer-events: none;">${city.name}</div>`,
-                iconSize: [80, 20],
-                iconAnchor: [40, 10]
-            });
-            L.marker([city.lat, city.lon], { icon, interactive: false, pane: 'labelsPane' }).addTo(group);
-        });
-    }
-
-    updateCityLabels(false);
-    group.addTo(map);
-    return { group, updateCityLabels };
-}
-
-// Rejestracja podkładów kartograficznych
+// Rejestracja podkladow kartograficznych (Esri ArcGIS Online, OpenStreetMap, OpenTopoMap)
 export function setupBaseLayers(map) {
-    const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { 
-        maxZoom: 16, pane: 'basePane', attribution: 'Esri' 
+    const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 16, maxZoom: 18, pane: 'basePane', attribution: 'Esri'
     });
-    const lightBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { 
-        maxZoom: 16, pane: 'basePane', attribution: 'Esri' 
+    const hillshadeDarkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade_Dark/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18, pane: 'basePane', attribution: 'Esri, Copernicus DEM'
+    });
+    const lightBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 16, maxZoom: 18, pane: 'basePane', attribution: 'Esri'
     });
     const hillshadeBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 18, pane: 'basePane', attribution: 'Esri, Copernicus DEM'
     });
+    const osmBase = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, pane: 'basePane', attribution: '&copy; OpenStreetMap contributors'
+    });
     const openTopoBase = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        maxZoom: 17, pane: 'basePane', attribution: 'OpenTopoMap'
+        maxZoom: 17, pane: 'basePane', attribution: 'OpenTopoMap (&copy; OSM)'
     });
     const esriTopoBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19, pane: 'basePane', attribution: 'Esri World Topo'
     });
+    const imageryBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, pane: 'basePane', attribution: 'Esri World Imagery'
+    });
 
     const basemaps = {
-        "Ciemny (Dark)": darkBase,
-        "Jasny (Light)": lightBase,
-        "Rzeźba terenu (Hillshade)": hillshadeBase,
-        "Topograficzna (OpenTopo)": openTopoBase,
-        "Fizyczna (World Topo)": esriTopoBase
+        'Ciemny (Dark)': darkBase,
+        'Rzeźba ciemna (Hillshade Dark)': hillshadeDarkBase,
+        'Jasny (Light)': lightBase,
+        'Rzeźba terenu (Hillshade)': hillshadeBase,
+        'OpenStreetMap': osmBase,
+        'Topograficzna (OpenTopo)': openTopoBase,
+        'Fizyczna (World Topo)': esriTopoBase,
+        'Satelitarna (Imagery)': imageryBase
     };
 
     darkBase.addTo(map);
     return basemaps;
+}
+
+function isLightBasemap(name) {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('ciemny') || lower.includes('ciemna') || lower.includes('dark') || lower.includes('satelitarn')) {
+        return false;
+    }
+    return lower.includes('jasny') || lower.includes('topo') || lower.includes('rzeźba') || lower.includes('openstreetmap') || lower.includes('fizyczna');
 }
 
 export function initMap(containerId = 'premium-map') {
@@ -112,8 +88,7 @@ export function initMap(containerId = 'premium-map') {
     window.cityLabelsGroup = cityLabels.group;
 
     map.on('baselayerchange', (e) => {
-        const nameLower = (e.name || '').toLowerCase();
-        const isLight = nameLower.includes('jasny') || nameLower.includes('topo') || nameLower.includes('rzeźba');
+        const isLight = isLightBasemap(e.name);
         cityLabels.updateCityLabels(isLight);
         if (typeof window.updateBoundariesStyle === 'function') {
             window.updateBoundariesStyle(isLight);
