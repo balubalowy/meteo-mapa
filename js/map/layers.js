@@ -13,16 +13,14 @@ let boundariesLayerGroup = null, countriesGeoLayer = null, provincesGeoLayer = n
 
 function getBoundaryColors(isLight) {
     return isLight
-        ? { country: 'rgba(15, 23, 42, 0.82)', province: 'rgba(51, 65, 85, 0.55)' }
-        : { country: 'rgba(241, 245, 249, 0.78)', province: 'rgba(226, 232, 240, 0.42)' };
+        ? { country: 'rgba(15, 23, 42, 0.90)', province: 'rgba(15, 23, 42, 0.72)', shadow: 'drop-shadow(0 0 1.2px rgba(255, 255, 255, 0.85))' }
+        : { country: 'rgba(248, 250, 252, 0.92)', province: 'rgba(241, 245, 249, 0.78)', shadow: 'drop-shadow(0 0 1.3px rgba(2, 6, 23, 0.85))' };
 }
 
 export function initBoundaries(map) {
-    if (!map.getPane('boundariesPane')) {
-        map.createPane('boundariesPane');
-        map.getPane('boundariesPane').style.zIndex = 395;
-        map.getPane('boundariesPane').style.pointerEvents = 'none';
-    }
+    const pane = map.getPane('boundariesPane') || map.createPane('boundariesPane');
+    pane.style.zIndex = 395; pane.style.pointerEvents = 'none';
+    pane.style.filter = getBoundaryColors(isCurrentThemeLight).shadow;
     boundariesLayerGroup = L.layerGroup([], { pane: 'boundariesPane' });
 
     const loadGeo = (url, weight, dash, isProv) => fetch(url).then(r => r.json()).then(data => {
@@ -32,14 +30,15 @@ export function initBoundaries(map) {
         if (isProv) provincesGeoLayer = lyr; else countriesGeoLayer = lyr;
     }).catch(err => console.error('Błąd granic:', err));
 
-    // Granice panstw Eurostat GISCO 1:1M (ciagla linia) + wewnetrzne granice wojewodztw (przerywana, brak podwojnych linii)
-    loadGeo('assets/geo/europe_countries.json', 1.35, null, false);
-    loadGeo('assets/geo/wojewodztwa.geojson', 0.95, '3, 3', true);
+    // Granice panstw Eurostat GISCO 1:1M (ciagla linia) + wewnetrzne granice wojewodztw (wyrazna przerywana z kontrastowym cieniem)
+    loadGeo('assets/geo/europe_countries.json', 1.7, null, false);
+    loadGeo('assets/geo/wojewodztwa.geojson', 1.3, '5, 4', true);
 
     window.boundariesLayerGroup = boundariesLayerGroup;
     window.updateBoundariesStyle = (isLight) => {
         isCurrentThemeLight = Boolean(isLight);
         const cols = getBoundaryColors(isCurrentThemeLight);
+        pane.style.filter = cols.shadow;
         countriesGeoLayer?.setStyle({ color: cols.country });
         provincesGeoLayer?.setStyle({ color: cols.province });
     };
