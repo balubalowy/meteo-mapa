@@ -7,7 +7,7 @@ import { initSatellite, syncSatelliteTime } from './satellite.js';
 import {
     applySavedLibreWxrUI, loadLibreWxrFrames, renderLibreWxrFrame,
     getLibreWxrLayer, getLibreWxrFrames, getLibreWxrLastPastTime, getLibreWxrDefaultIndex,
-    setLibreWxrBaseTheme, readLibreWxrOptsFromUI, setQuickLightning, formatLibreWxrStatus,
+    setLibreWxrBaseTheme, readLibreWxrOptsFromUI, setQuickLightning,
     setRadarStatusMsg, updateForecastBadge
 } from './radar_librewxr.js';
 
@@ -39,19 +39,19 @@ export function showRadarFrame(map, index) {
 }
 
 async function refreshLibreWxr(map, force = false) {
-    setRadarStatusMsg('Ładowanie klatek LibreWXR...');
+    setRadarStatusMsg('Ładowanie klatek radaru...');
     try {
         const res = await loadLibreWxrFrames(force);
         if (!res.ok) {
-            setRadarStatusMsg('Brak dostępnych klatek LibreWXR.', true);
+            setRadarStatusMsg('Brak dostępnych klatek radaru.', true);
             return;
         }
         syncSlider(res.frames.length, getLibreWxrDefaultIndex());
         showRadarFrame(map, currentFrame);
-        setRadarStatusMsg(formatLibreWxrStatus(Boolean(window.MAP_LAYERS?.radar?.visible)));
+        setRadarStatusMsg('');
     } catch (err) {
         console.error('Błąd pobierania LibreWXR:', err);
-        setRadarStatusMsg('Błąd połączenia z LibreWXR. Kliknij Play lub przełącz warstwę, aby ponowić.', true);
+        setRadarStatusMsg('Błąd połączenia z radarem. Kliknij Play lub przełącz warstwę, aby ponowić.', true);
     }
 }
 
@@ -110,7 +110,7 @@ function registerRadarGlobals(map) {
             refreshLibreWxr(map, true);
             return;
         }
-        setRadarStatusMsg(formatLibreWxrStatus(visible));
+        setRadarStatusMsg('');
     };
 }
 

@@ -159,13 +159,6 @@ export function setLibreWxrBaseTheme(isLight) {
     isLightBase = Boolean(isLight);
 }
 
-export function formatLibreWxrStatus(isVisible) {
-    if (!frames.length || !isVisible) return '';
-    const nowcCount = frames.filter(f => f.isNowcast).length;
-    const pastCount = frames.length - nowcCount;
-    return `Archiwum: ${pastCount} klatek | Prognoza: +${nowcCount * 10} min`;
-}
-
 export function setRadarStatusMsg(text, isError = false) {
     const el = document.getElementById('radar-status-msg');
     if (!el) return;
