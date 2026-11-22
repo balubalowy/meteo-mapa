@@ -10,7 +10,13 @@ Samodzielna interaktywna mapa synoptyczna i radarowa na żywo (HTML/CSS/JS, bez 
 - **Radar opadów**: kompozyt IMGW POLRAD CMAX (5-minutowy) oraz RainViewer z odtwarzaczem i osią czasu.
 - **Satelita EUMETSAT WMS**: tryb dzienny MSG FES RGB oraz nocny MTG-I1 FCI IR 10.5 µm zsynchronizowane z osią czasu radaru.
 - **Eksport CSV (R / Excel)**: pobieranie bieżącego parametru lub zbioru wszystkich parametrów z metadanymi czasu UTC i kodowaniem UTF-8 BOM.
-- **Menedżer warstw i podkłady**: kontrola kolejności i krycia warstw rastrowych (Radar, Interpolacja, Satelita), 8 podkładów mapowych (Esri, OpenStreetMap, OpenTopoMap) oraz wielopoziomowa nakładka etykiet miejscowości nad warstwą interpolacji.
+- **Menedżer warstw i podkłady**: kontrola kolejności i krycia warstw rastrowych (Radar, Interpolacja, Satelita), 8 podkładów mapowych (Esri, OpenStreetMap, OpenTopoMap) oraz wielopoziomowa nakładka etykiet miejscowości (GeoNames CC BY 4.0) z detekcją kolizji względem stacji i wartości.
+
+## Źródła danych i klauzule
+
+- Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy.
+- Dane Instytutu Meteorologii i Gospodarki Wodnej - Państwowego Instytutu Badawczego zostały przetworzone. Bieżące pomiary operacyjne mogą stanowić dane niezweryfikowane.
+- Pozostałe źródła: Rafał Raczyński (`rafalraczynski.com.pl`), DWD / Open-Meteo (CC BY 4.0), IEM ASOS (Iowa State University), RainViewer, EUMETSAT WMS, Esri, OpenStreetMap (ODbL), OpenTopoMap (CC-BY-SA), GeoNames (CC BY 4.0), Eurostat GISCO / EuroGeographics oraz GUGiK (PRG).
 
 ## Uruchomienie na GitHub Pages
 

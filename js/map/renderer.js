@@ -3,7 +3,7 @@
 
 import { COLORSCALES, DEFAULT_ZMIENNE, generateIDWImage, generateIsobarsOverlay, getColorRGBA } from './interpolation.js';
 import { getIMGWLiveData } from './stations.js';
-import { updateDelayBadge } from './ui.js';
+import { updateDelayBadge, formatStationValueHtml } from './ui.js';
 
 const ISO_STEPS = ['auto', 1, 2, 5, 10, 20, 30, 40, 50, 100, 200, 500, 1000];
 const TREND_RANGES = {
@@ -50,10 +50,10 @@ function resolveScaleConfig(zmienna, okres) {
     return base;
 }
 
-function buildMarkerHtml(idx, data, cfg, ptColor) {
+function buildMarkerHtml(idx, data, cfg, ptColor, rgba) {
     const isForecast = data.pt_types?.[idx] === 'PROGNOZA';
     const suffix = isForecast ? '<span style="font-size:0.65rem; color:#60a5fa; vertical-align:top; margin-left:1px;">~</span>' : '';
-    let html = cfg.showTxt ? `<div style="color: white; text-shadow: 0 0 3px black, 0 0 3px black; font-weight: bold;">${data.pt_txts[idx]}${suffix}</div>` : '';
+    let html = cfg.showTxt ? formatStationValueHtml(data.pt_txts[idx], suffix, rgba) : '';
 
     const isWind = (cfg.zmienna === 'wiatr' || cfg.zmienna === 'wiatr_sr');
     const hasDir = !isNaN(data.pt_dirs?.[idx]) && data.pt_dirs?.[idx] !== null && data.pt_vals[idx] > 0;
@@ -80,7 +80,7 @@ function renderMarkers(data, cfg) {
         const rgba = getColorRGBA(val, cfg.scale, cfg.cmin, cfg.cmax);
         // Dla wartosci zerowych/przezroczystych (np. brak sniegu, cisza) kropka stacji pozostaje subtelnie widoczna
         const ptColor = rgba[3] < 25 ? 'rgba(203,213,225,0.65)' : `rgb(${rgba[0]},${rgba[1]},${rgba[2]})`;
-        const html = buildMarkerHtml(i, data, cfg, ptColor);
+        const html = buildMarkerHtml(i, data, cfg, ptColor, rgba);
 
         const icon = L.divIcon({ className: 'imgw-station-marker', html, iconSize: [30, 25], iconAnchor: [15, 12] });
         L.marker([data.pt_lats[i], data.pt_lons[i]], { icon, pane: 'stationsPane' })
@@ -141,7 +141,7 @@ async function renderIsobarsOverlay(map, showForeign, seq) {
 }
 
 export async function renderIMGW(map) {
-    if (!imgwLayerGroup) imgwLayerGroup = L.layerGroup().addTo(map);
+    if (!imgwLayerGroup) imgwLayerGroup = L.layerGroup([], { attribution: 'Dane IMGW-PIB (przetworzone)' }).addTo(map);
     const seq = ++renderSeq;
     const okres = resolveOkres(), zmienna = document.getElementById('imgw-zmienna')?.value || 'temp';
     const data = await fetchParamData(okres, zmienna, document.getElementById('imgw-loading'));
@@ -150,18 +150,16 @@ export async function renderIMGW(map) {
     imgwLayerGroup.clearLayers();
     if (idwOverlay) { map.removeLayer(idwOverlay); idwOverlay = null; window.idwOverlay = null; }
     if (isobarsOverlay) { map.removeLayer(isobarsOverlay); isobarsOverlay = null; window.isobarsOverlay = null; }
-    window.currentRenderedParam = zmienna;
-    window.currentRenderedOkres = okres;
+    window.currentRenderedParam = zmienna; window.currentRenderedOkres = okres;
     if (!data?.pt_lats?.length) {
-        window.currentRenderedData = null;
-        window.currentDisplayedTimeMs = 0;
-        updateDelayBadge(0, zmienna);
-        window.updateExportMetaBadge?.(null);
+        window.currentRenderedData = null; window.currentDisplayedTimeMs = 0;
+        updateDelayBadge(0, zmienna); window.updateExportMetaBadge?.(null); window.refreshCityLabels?.();
         return;
     }
 
     window.currentRenderedData = data;
     window.updateExportMetaBadge?.(data);
+    window.refreshCityLabels?.();
 
     const zInfo = resolveScaleConfig(zmienna, okres);
     const curParamName = zInfo.nazwa || zmienna;

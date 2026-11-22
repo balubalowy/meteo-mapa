@@ -145,6 +145,14 @@
                         <label title="Stacje z Czech, Słowacji, Niemiec, Ukrainy, Litwy, Białorusi i Kaliningradu"><input type="checkbox" id="chk-foreign" onchange="renderIMGW()"> Zagranica</label>
                     </div>
                     <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Styl wartości:</span>
+                        <div style="display: flex; gap: 4px; background: var(--bg-primary); padding: 2px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                            <button type="button" id="val-style-halo" class="btn btn-primary" onclick="window.setValueStyle && window.setValueStyle('halo')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kolorowa cyfra z inteligentnym obrysem (Wariant E)">Kolor</button>
+                            <button type="button" id="val-style-pill" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('pill')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Kapsułka w kolorze skali z auto-kontrastem (Wariant B)">Kapsułka</button>
+                            <button type="button" id="val-style-white" class="btn btn-ghost" onclick="window.setValueStyle && window.setValueStyle('white')" style="flex: 1; padding: 3px 4px; font-size: 0.69rem;" title="Klasyczne białe wartości z obrysem">Białe</button>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Krok izolinii:</label>
                             <span id="iso-step-val" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-primary);">Auto</span>
@@ -190,8 +198,11 @@
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle); background: rgba(0, 0, 0, 0.2);">
             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: bold;">Źródła danych i autorstwo</div>
             
+            <div style="font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px;">
+                Źródłem pochodzenia danych jest <b>Instytut Meteorologii i Gospodarki Wodnej - Państwowy Instytut Badawczy</b>. Dane Instytutu Meteorologii i Gospodarki Wodnej - Państwowego Instytutu Badawczego zostały przetworzone. Bieżące pomiary operacyjne mogą stanowić dane niezweryfikowane.
+            </div>
             <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">
-                Prezentowane mapy i analizy powstają na bazie przetworzonych otwartych danych meteorologicznych i geograficznych następujących instytucji i dostawców:
+                Pełny wykaz źródeł meteorologicznych i geograficznych użytych na mapie:
                 <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted); font-size: 0.74rem; display: flex; flex-direction: column; gap: 3px;">
                     <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF), kompozyt radarowy POLRAD CMAX oraz biuletyn pokrywy śnieżnej.</li>
                     <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
@@ -199,7 +210,8 @@
                     <li><b>IEM ASOS (Iowa State University)</b> - zagraniczne stacje lotniskowe METAR/ASOS (CZ, SK, DE, LT, UA, BY).</li>
                     <li><b>RainViewer</b> - kafelkowy kompozyt radarów meteorologicznych (archiwum i nowcasting).</li>
                     <li><b>EUMETSAT</b> - zobrazowania satelitarne WMS: tryb dzienny MSG FES RGB (msg_fes:rgb_eview) oraz nocny MTG-I1 FCI IR 10.5 µm (mtg_fd:ir105_hrfi).</li>
-                    <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i warstwa referencyjna etykiet miejscowości.</li>
+                    <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i rzeźba terenu.</li>
+                    <li><b>GeoNames</b> (CC BY 4.0) - baza współrzędnych i wielkości miejscowości dla warstwy etykiet miast.</li>
                     <li><b>Eurostat GISCO (&copy; EuroGeographics) oraz GUGiK (PRG)</b> - granice państw Europy w skali 1:1 000 000 oraz wewnętrzne granice województw Polski.</li>
                 </ul>
             </div>
@@ -250,11 +262,13 @@
         background: transparent;
         border: none;
         color: white;
-        text-shadow: 1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black;
         font-weight: bold;
         font-size: 11px;
         text-align: center;
         line-height: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 </style>
 

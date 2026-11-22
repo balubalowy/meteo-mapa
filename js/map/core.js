@@ -13,8 +13,8 @@ export function setupPanes(map) {
         { name: 'isobarsPane', zIndex: 365, pointerEvents: 'none' },
         { name: 'drawingsPane', zIndex: 380, pointerEvents: 'auto' },
         { name: 'boundariesPane', zIndex: 395, pointerEvents: 'none' },
-        { name: 'stationsPane', zIndex: 420, pointerEvents: 'auto' },
-        { name: 'labelsPane', zIndex: 650, pointerEvents: 'none' }
+        { name: 'labelsPane', zIndex: 415, pointerEvents: 'none' },
+        { name: 'stationsPane', zIndex: 420, pointerEvents: 'auto' }
     ];
 
     panesConfig.forEach(cfg => {

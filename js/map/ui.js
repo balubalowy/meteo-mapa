@@ -92,6 +92,50 @@ export function initUIControls(map) {
             updateDelayBadge(window.currentDisplayedTimeMs, window.currentDisplayedParamName);
         }
     }, 30000);
+
+    syncValueStyleButtons(getValueStyle());
+}
+
+const VALUE_STYLE_KEY = 'bmapa_value_style_v1';
+const VALID_VALUE_STYLES = ['halo', 'pill', 'white'];
+
+export function getValueStyle() {
+    try {
+        const saved = localStorage.getItem(VALUE_STYLE_KEY);
+        if (VALID_VALUE_STYLES.includes(saved)) return saved;
+    } catch (_) {}
+    return 'halo';
+}
+
+function syncValueStyleButtons(mode) {
+    VALID_VALUE_STYLES.forEach(m => {
+        const btn = document.getElementById(`val-style-${m}`);
+        if (btn) btn.className = m === mode ? 'btn btn-primary' : 'btn btn-ghost';
+    });
+}
+
+export function setValueStyle(mode) {
+    const next = VALID_VALUE_STYLES.includes(mode) ? mode : 'halo';
+    try { localStorage.setItem(VALUE_STYLE_KEY, next); } catch (_) {}
+    syncValueStyleButtons(next);
+    window.renderIMGW?.();
+}
+
+// Renderuje wartosc pomiarowa w wybranym trybie: Wariant E (Smart Halo), Wariant B (kapsulka) lub klasyczna biel
+export function formatStationValueHtml(txt, suffix, rgba) {
+    const mode = getValueStyle();
+    if (mode === 'white') return `<div class="st-val-white">${txt}${suffix}</div>`;
+
+    const isZero = rgba[3] < 25;
+    const lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2];
+    if (mode === 'pill') {
+        if (isZero) return `<div class="st-val-pill st-val-zero">${txt}${suffix}</div>`;
+        const fg = lum > 142 ? '#0f172a' : '#ffffff';
+        return `<div class="st-val-pill" style="background:rgb(${rgba[0]},${rgba[1]},${rgba[2]});color:${fg};">${txt}${suffix}</div>`;
+    }
+    if (isZero) return `<div class="st-val-halo st-val-zero">${txt}${suffix}</div>`;
+    const cls = lum < 75 ? 'st-val-halo st-val-halo-light' : 'st-val-halo';
+    return `<div class="${cls}" style="color:rgb(${rgba[0]},${rgba[1]},${rgba[2]});">${txt}${suffix}</div>`;
 }
 
 export function updateCitiesVisibility() {
@@ -102,5 +146,8 @@ export function updateCitiesVisibility() {
     } else if (!show && window.premiumMap.hasLayer(window.cityLabelsGroup)) {
         window.premiumMap.removeLayer(window.cityLabelsGroup);
     }
+    window.refreshCityLabels?.();
 }
 window.updateCitiesVisibility = updateCitiesVisibility;
+window.setValueStyle = setValueStyle;
+window.getValueStyle = getValueStyle;
