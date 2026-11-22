@@ -48,13 +48,10 @@
             </div>
         </header>
 
-        <!-- SEKCJA: Radar LibreWXR -->
-        <section class="sb-sec">
+        <!-- SEKCJA: Radar (widoczna wylacznie gdy w Warstwach zaznaczony jest Radar) -->
+        <section id="radar-section" class="sb-sec sb-hidden">
             <div class="sb-sec-h">
-                <label class="sb-chk-title">
-                    <input type="checkbox" id="chk-radar-quick" onchange="window.toggleLayer && window.toggleLayer('radar', this.checked)">
-                    Radar LibreWXR
-                </label>
+                <span class="sb-sec-title">Radar</span>
                 <span id="rv-forecast-badge" class="sb-fcst-tag">PROGNOZA</span>
             </div>
 
@@ -79,7 +76,7 @@
                     <div class="sb-details-grid">
                         <div>
                             <label for="lwxr-color" class="sb-lbl">Paleta radaru</label>
-                            <select id="lwxr-color" class="sb-select" aria-label="Paleta kolorów radaru LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
+                            <select id="lwxr-color" class="sb-select" aria-label="Paleta kolorów radaru" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
                                 <option value="10" selected>10: Viper HD</option>
                                 <option value="14">14: Windy</option>
                                 <option value="2">2: Universal Blue</option>
@@ -91,7 +88,7 @@
                         </div>
                         <div>
                             <label for="lwxr-lightning" class="sb-lbl">Tryb wyładowań</label>
-                            <select id="lwxr-lightning" class="sb-select" aria-label="Tryb wyładowań LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
+                            <select id="lwxr-lightning" class="sb-select" aria-label="Tryb wyładowań radaru" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()">
                                 <option value="" selected>Wyłączone</option>
                                 <option value="dots">Kropki (dots)</option>
                                 <option value="bolts">Błyskawice (bolts)</option>
@@ -103,7 +100,7 @@
             <div id="radar-status-msg" class="sb-status" style="display: none;"></div>
         </section>
 
-        <!-- SEKCJA: Parametr, stacje i horyzont RTDB -->
+        <!-- SEKCJA: Parametr i źródło stacji -->
         <section class="sb-sec">
             <div class="sb-sec-h">
                 <span>Parametr</span>
@@ -116,18 +113,22 @@
             </div>
 
             <input type="hidden" id="imgw-zmienna" value="temp">
-            <div class="sb-param-grid" role="group" aria-label="Wybór parametru meteorologicznego">
-                <button type="button" class="sb-param-btn is-active" data-param="temp" onclick="window.selectMapParam && window.selectMapParam('temp')">Temperatura</button>
-                <button type="button" class="sb-param-btn" data-param="grunt" onclick="window.selectMapParam && window.selectMapParam('grunt')">Temp. gruntu</button>
-                <button type="button" class="sb-param-btn" data-param="rosy" onclick="window.selectMapParam && window.selectMapParam('rosy')">Punkt rosy</button>
-                <button type="button" class="sb-param-btn" data-param="wilg" onclick="window.selectMapParam && window.selectMapParam('wilg')">Wilgotność</button>
-                <button type="button" class="sb-param-btn" data-param="wiatr_sr" onclick="window.selectMapParam && window.selectMapParam('wiatr_sr')">Wiatr średni</button>
-                <button type="button" class="sb-param-btn" data-param="wiatr" onclick="window.selectMapParam && window.selectMapParam('wiatr')">Porywy wiatru</button>
-                <button type="button" class="sb-param-btn" data-param="cisnienie" onclick="window.selectMapParam && window.selectMapParam('cisnienie')">Ciśnienie QFF</button>
-                <button type="button" class="sb-param-btn" data-param="snieg" onclick="window.selectMapParam && window.selectMapParam('snieg')">Śnieg (cm)</button>
-                <button type="button" class="sb-param-btn" data-param="snieg_swiezy" onclick="window.selectMapParam && window.selectMapParam('snieg_swiezy')">Świeży śnieg</button>
+            <div class="sb-param-grid" role="group" aria-label="Wybór parametru meteorologicznego" style="margin-bottom: 0;">
+                <button type="button" class="sb-param-btn is-active" data-param="temp" onclick="window.selectMapParam && window.selectMapParam('temp')">Temperatura (°C)</button>
+                <button type="button" class="sb-param-btn" data-param="grunt" onclick="window.selectMapParam && window.selectMapParam('grunt')">Temp. gruntu (°C)</button>
+                <button type="button" class="sb-param-btn" data-param="rosy" onclick="window.selectMapParam && window.selectMapParam('rosy')">Punkt rosy (°C)</button>
+                <button type="button" class="sb-param-btn" data-param="wilg" onclick="window.selectMapParam && window.selectMapParam('wilg')">Wilgotność (%)</button>
+                <button type="button" class="sb-param-btn" data-param="wiatr_sr" onclick="window.selectMapParam && window.selectMapParam('wiatr_sr')">Wiatr średni (km/h)</button>
+                <button type="button" class="sb-param-btn" data-param="wiatr" onclick="window.selectMapParam && window.selectMapParam('wiatr')">Porywy wiatru (km/h)</button>
+                <button type="button" class="sb-param-btn" data-param="cisnienie" onclick="window.selectMapParam && window.selectMapParam('cisnienie')">Ciśnienie QFF (hPa)</button>
                 <button type="button" class="sb-param-btn" data-param="lcl" onclick="window.selectMapParam && window.selectMapParam('lcl')">LCL (m)</button>
+                <button type="button" class="sb-param-btn" data-param="snieg_swiezy" onclick="window.selectMapParam && window.selectMapParam('snieg_swiezy')">Świeży śnieg (cm)</button>
+                <button type="button" class="sb-param-btn" data-param="snieg" onclick="window.selectMapParam && window.selectMapParam('snieg')">Pokrywa śnieżna (cm)</button>
             </div>
+        </section>
+
+        <!-- SEKCJA: Horyzont RTDB, styl liczb i elementy mapy -->
+        <section class="sb-sec">
 
             <div class="sb-two-col">
                 <div>

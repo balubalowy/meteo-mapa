@@ -88,9 +88,7 @@ function setupRadarControls(map) {
 }
 
 function syncRadarPanelVisibility(visible) {
-    const chk = document.getElementById('chk-radar-quick');
-    if (chk) chk.checked = Boolean(visible);
-    document.getElementById('radar-controls-body')?.classList.toggle('sb-hidden', !visible);
+    document.getElementById('radar-section')?.classList.toggle('sb-hidden', !visible);
 }
 
 function registerRadarGlobals(map) {
