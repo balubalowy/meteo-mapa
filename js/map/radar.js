@@ -1,23 +1,25 @@
-import { fmtPlTime } from './stations.js';
+// js/map/radar.js
+// Zrodla: IMGW-PIB POLRAD CMAX (danepubliczne.imgw.pl), RainViewer (rainviewer.com),
+// LibreWXR (librewxr.net, CC BY 4.0). Synchronizacja satelity w satellite.js.
 
-export const IMGW_RADAR_SCALE = [
-    [0, [0, 0, 0, 0]], [3, [4, 5, 147, 20]], [8, [4, 5, 147, 100]], [10, [31, 72, 216, 180]], [12, [58, 126, 231, 230]], [14, [86, 181, 247, 255]], [16, [109, 201, 252, 255]], [17, [121, 211, 248, 255]], [20, [174, 233, 251, 255]], [23, [231, 248, 255, 255]], [25, [253, 252, 224, 255]], [27, [253, 246, 158, 255]], [28, [254, 241, 136, 255]], [30, [249, 232, 90, 255]], [32, [245, 206, 77, 255]], [34, [239, 151, 54, 255]], [36, [233, 98, 43, 255]], [37, [236, 73, 38, 255]], [40, [184, 37, 29, 255]], [43, [159, 30, 34, 255]], [44, [149, 29, 39, 255]], [46, [142, 28, 51, 255]], [47, [159, 31, 79, 255]], [50, [187, 42, 135, 255]], [53, [210, 55, 172, 255]], [55, [219, 72, 189, 255]], [56, [221, 79, 197, 255]], [59, [203, 144, 198, 255]], [65, [180, 100, 180, 255]], [100, [0, 0, 0, 255]], [101, [0, 0, 0, 0]], [255, [0, 0, 0, 0]]
-];
+import { fmtPlTime } from './stations.js';
+import { initSatellite, syncSatelliteTime } from './satellite.js';
+import {
+    applySavedLibreWxrUI, loadLibreWxrFrames, renderLibreWxrFrame, hideLibreWxrLayer,
+    getLibreWxrLayer, getLibreWxrFrames, getLibreWxrLastPastTime, getLibreWxrDefaultIndex,
+    setLibreWxrBaseTheme, readLibreWxrOptsFromUI, formatLibreWxrStatus, setRadarStatusMsg,
+    updateForecastBadge
+} from './radar_librewxr.js';
 
 const IMGW_RADAR_BOUNDS = [[48.2985, 12.4411], [56.3277, 25.6641]];
 
-let activeRadarSource = 'rv', activeSatMode = 'day', radarTileLayer = null, radarHost = '';
-let radarFrames = [], currentFrame = 0, animationTimer = null, imgwRadarOverlay = null;
-let imgwFrames = [], satelliteDayLayer = null, satelliteNightLayer = null, lastSatSyncTime = null;
+let activeRadarSource = 'rv', radarTileLayer = null, radarHost = '';
+let radarFrames = [], currentFrame = 0, animationTimer = null, imgwRadarOverlay = null, imgwFrames = [];
 
-export function getIMGWRadarColor(dbz) {
-    if (dbz <= 0) return [0, 0, 0, 0];
-    for (let i = 0; i < IMGW_RADAR_SCALE.length - 1; i++) {
-        if (dbz >= IMGW_RADAR_SCALE[i][0] && dbz <= IMGW_RADAR_SCALE[i + 1][0]) {
-            return IMGW_RADAR_SCALE[i][1];
-        }
-    }
-    return IMGW_RADAR_SCALE[IMGW_RADAR_SCALE.length - 1][1];
+function getFramesForSource(src) {
+    if (src === 'imgw') return imgwFrames;
+    if (src === 'lwxr') return getLibreWxrFrames();
+    return radarFrames;
 }
 
 function generateImgwRadarFrames() {
@@ -26,36 +28,18 @@ function generateImgwRadarFrames() {
         const d = new Date(now.getTime() - (i * 5 + 6) * 60000);
         d.setUTCMinutes(Math.floor(d.getUTCMinutes() / 5) * 5, 0, 0);
         const ts = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}`;
-        const label = fmtPlTime(d);
         const url = `https://danepubliczne.imgw.pl/pl/datastore/getfiledown/Oper/Polrad/Produkty/POLCOMP/COMPO_CMAX_250.comp.cmax/${ts}0000dBZ.cmax_echoOnly.png`;
-        if (!frames.some(f => f.ts === ts)) {
-            frames.push({ ts, url, time: Math.floor(d.getTime() / 1000), label });
-        }
+        if (!frames.some(f => f.ts === ts)) frames.push({ ts, url, time: Math.floor(d.getTime() / 1000), label: fmtPlTime(d) });
     }
     return frames;
-}
-
-function syncSatelliteTime(timeUnixSec) {
-    if (!timeUnixSec || !window.MAP_LAYERS?.satellite?.visible) return;
-    const d = new Date(timeUnixSec * 1000);
-    d.setUTCMinutes(Math.floor(d.getUTCMinutes() / 15) * 15, 0, 0);
-    const timeStr = d.toISOString().replace('.000Z', 'Z');
-    if (lastSatSyncTime === timeStr) return;
-    lastSatSyncTime = timeStr;
-
-    if (activeSatMode === 'day' && satelliteDayLayer) satelliteDayLayer.setParams({ time: timeStr });
-    if (activeSatMode === 'night' && satelliteNightLayer) satelliteNightLayer.setParams({ time: timeStr });
 }
 
 function renderImgwFrame(map, frame, opacity) {
     if (!imgwRadarOverlay) {
         imgwRadarOverlay = L.imageOverlay(frame.url, IMGW_RADAR_BOUNDS, { opacity, pane: 'radarPane' });
         imgwRadarOverlay.on('error', () => {
-            // Jesli najnowsza klatka IMGW nie jest jeszcze opublikowana, cofnij o jedna klatke (maks. 3 kroki)
             if (activeRadarSource === 'imgw' && currentFrame > Math.max(0, imgwFrames.length - 4)) {
-                const slider = document.getElementById('rv-slider');
-                currentFrame = currentFrame - 1;
-                if (slider) slider.value = currentFrame;
+                syncSlider(imgwFrames.length, currentFrame - 1);
                 showRadarFrame(map, currentFrame);
             }
         });
@@ -77,52 +61,90 @@ function renderRvFrame(map, frame, opacity) {
     if (window.MAP_LAYERS?.radar?.visible && !map.hasLayer(radarTileLayer)) radarTileLayer.addTo(map);
 }
 
+function syncSlider(count, idx) {
+    const slider = document.getElementById('rv-slider');
+    if (slider && count > 0) {
+        slider.max = count - 1;
+        slider.value = idx;
+        currentFrame = idx;
+    }
+}
+
 export function showRadarFrame(map, index) {
-    currentFrame = parseInt(index);
+    currentFrame = parseInt(index, 10) || 0;
     const timeEl = document.getElementById('rv-time');
     const opacity = (window.MAP_LAYERS?.radar?.opacity ?? 68) / 100.0;
+    const frame = getFramesForSource(activeRadarSource)[currentFrame];
+    if (!frame) return;
 
+    updateForecastBadge(frame);
     if (activeRadarSource === 'imgw') {
-        const frame = imgwFrames[currentFrame];
-        if (!frame) return;
         renderImgwFrame(map, frame, opacity);
         if (timeEl) timeEl.textContent = frame.label;
         syncSatelliteTime(frame.time);
+    } else if (activeRadarSource === 'lwxr') {
+        renderLibreWxrFrame(map, frame, opacity);
+        if (timeEl) timeEl.textContent = fmtPlTime(frame.time * 1000);
+        // Satelita EUMETSAT nie ma przyszlych klatek, wiec w prognozie blokujemy go na ostatniej obserwacji
+        syncSatelliteTime(frame.isNowcast ? getLibreWxrLastPastTime() : frame.time);
     } else {
-        const frame = radarFrames[currentFrame];
-        if (!frame) return;
         renderRvFrame(map, frame, opacity);
         if (timeEl) timeEl.textContent = fmtPlTime(frame.time * 1000);
         syncSatelliteTime(frame.time);
     }
 }
 
-function createSatelliteLayers() {
-    const baseOpts = { format: 'image/png', transparent: true, opacity: 0.68, pane: 'satellitePane', maxNativeZoom: 7, maxZoom: 18 };
-    satelliteDayLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', { ...baseOpts, layers: 'msg_fes:rgb_eview', attribution: 'EUMETSAT MSG RGB' });
-    satelliteNightLayer = L.tileLayer.wms('https://view.eumetsat.int/geoserver/ows', { ...baseOpts, layers: 'mtg_fd:ir105_hrfi', attribution: 'EUMETSAT MTG-IR' });
+async function loadRainViewer(map) {
+    try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        radarHost = data.host || '';
+        const past = (data.radar?.past || []).map(f => ({ ...f, isNowcast: false }));
+        const nowc = (data.radar?.nowcast || []).map(f => ({ ...f, isNowcast: true }));
+        radarFrames = past.concat(nowc);
+        if (activeRadarSource === 'rv' && radarFrames.length) {
+            syncSlider(radarFrames.length, Math.max(0, past.length - 1));
+            showRadarFrame(map, currentFrame);
+        }
+    } catch (err) {
+        console.error('Błąd pobierania RainViewer:', err);
+        if (activeRadarSource === 'rv') setRadarStatusMsg('Błąd pobierania RainViewer.', true);
+    }
+}
+
+async function activateLibreWxr(map) {
+    setRadarStatusMsg('Ładowanie klatek LibreWXR...');
+    try {
+        const res = await loadLibreWxrFrames();
+        if (activeRadarSource !== 'lwxr') return;
+        if (!res.ok) { setRadarStatusMsg('Brak dostępnych klatek LibreWXR.', true); return; }
+        syncSlider(res.frames.length, getLibreWxrDefaultIndex());
+        showRadarFrame(map, currentFrame);
+        setRadarStatusMsg(formatLibreWxrStatus(Boolean(window.MAP_LAYERS?.radar?.visible)));
+    } catch (err) {
+        console.error('Błąd pobierania LibreWXR:', err);
+        if (activeRadarSource === 'lwxr') setRadarStatusMsg('Błąd połączenia z LibreWXR. Kliknij ponownie.', true);
+    }
 }
 
 function setupRadarControls(map) {
-    const rvSlider = document.getElementById('rv-slider');
-    if (rvSlider) rvSlider.addEventListener('input', e => showRadarFrame(map, parseInt(e.target.value)));
-
-    const rvPlayBtn = document.getElementById('rv-play-btn');
-    if (!rvPlayBtn) return;
-    rvPlayBtn.addEventListener('click', e => {
+    document.getElementById('rv-slider')?.addEventListener('input', e => showRadarFrame(map, parseInt(e.target.value, 10)));
+    document.getElementById('rv-play-btn')?.addEventListener('click', e => {
         const btn = e.currentTarget;
         if (animationTimer) {
-            clearInterval(animationTimer);
-            animationTimer = null;
+            clearInterval(animationTimer); animationTimer = null;
             btn.innerHTML = '<i data-lucide="play"></i>';
         } else {
+            if (!window.MAP_LAYERS?.radar?.visible) { window.toggleLayer?.('radar', true); window.renderLayerManagerUI?.(); }
+            const max = getFramesForSource(activeRadarSource).length;
+            if (!max) return;
             btn.innerHTML = '<i data-lucide="pause"></i>';
-            const max = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
             if (currentFrame >= max - 1) currentFrame = 0;
             animationTimer = setInterval(() => {
-                const count = activeRadarSource === 'imgw' ? imgwFrames.length : radarFrames.length;
-                currentFrame = currentFrame >= count - 1 ? 0 : currentFrame + 1;
-                if (rvSlider) rvSlider.value = currentFrame;
+                const count = getFramesForSource(activeRadarSource).length;
+                if (!count) return;
+                syncSlider(count, currentFrame >= count - 1 ? 0 : currentFrame + 1);
                 showRadarFrame(map, currentFrame);
             }, 500);
         }
@@ -130,70 +152,43 @@ function setupRadarControls(map) {
     });
 }
 
-export function initRadar(map) {
-    imgwFrames = generateImgwRadarFrames();
-    createSatelliteLayers();
-
-    fetch('https://api.rainviewer.com/public/weather-maps.json')
-        .then(res => res.json())
-        .then(data => {
-            radarHost = data.host;
-            radarFrames = data.radar.past.concat(data.radar.nowcast);
-            if (activeRadarSource === 'rv') {
-                const slider = document.getElementById('rv-slider');
-                if (slider && radarFrames.length > 0) {
-                    slider.max = radarFrames.length - 1;
-                    slider.value = radarFrames.length - 1;
-                    currentFrame = radarFrames.length - 1;
-                }
-                showRadarFrame(map, currentFrame);
-            }
-        })
-        .catch(err => console.error("Błąd pobierania RainViewer:", err));
-
+function registerRadarGlobals(map) {
     window.getRadarSource = () => activeRadarSource;
-    window.getSatelliteMode = () => activeSatMode;
-
-    window.setSatelliteMode = (mode) => {
-        activeSatMode = mode;
-        if (window.MAP_LAYERS?.satellite?.visible) {
-            const toRemove = mode === 'day' ? satelliteNightLayer : satelliteDayLayer;
-            const toAdd = mode === 'day' ? satelliteDayLayer : satelliteNightLayer;
-            if (map.hasLayer(toRemove)) map.removeLayer(toRemove);
-            if (!map.hasLayer(toAdd)) map.addLayer(toAdd);
-        }
-        if (typeof window.renderLayerManagerUI === 'function') window.renderLayerManagerUI();
+    window.updateLibreWxrOptions = () => { readLibreWxrOptsFromUI(); if (activeRadarSource === 'lwxr') showRadarFrame(map, currentFrame); };
+    window.setLibreWxrTheme = (isLight) => { setLibreWxrBaseTheme(isLight); if (activeRadarSource === 'lwxr') showRadarFrame(map, currentFrame); };
+    window.onRadarVisibilityChange = (visible) => {
+        if (activeRadarSource === 'lwxr') setRadarStatusMsg(formatLibreWxrStatus(visible));
     };
-
     window.setRadarSource = (src) => {
         activeRadarSource = src;
-        const btnImgw = document.getElementById('radar-src-imgw');
-        const btnRv = document.getElementById('radar-src-rv');
-        if (btnImgw) btnImgw.className = src === 'imgw' ? 'btn btn-primary' : 'btn btn-ghost';
-        if (btnRv) btnRv.className = src === 'rv' ? 'btn btn-primary' : 'btn btn-ghost';
-
-        if (src === 'imgw') {
-            if (radarTileLayer && map.hasLayer(radarTileLayer)) map.removeLayer(radarTileLayer);
-            imgwFrames = generateImgwRadarFrames();
-        } else if (imgwRadarOverlay && map.hasLayer(imgwRadarOverlay)) {
-            map.removeLayer(imgwRadarOverlay);
+        ['imgw', 'rv', 'lwxr'].forEach(id => {
+            const b = document.getElementById(`radar-src-${id}`);
+            if (b) b.className = src === id ? 'btn btn-primary' : 'btn btn-ghost';
+        });
+        const lwxrBox = document.getElementById('lwxr-options');
+        if (lwxrBox) lwxrBox.style.display = src === 'lwxr' ? 'flex' : 'none';
+        if (src !== 'imgw' && imgwRadarOverlay && map.hasLayer(imgwRadarOverlay)) map.removeLayer(imgwRadarOverlay);
+        if (src !== 'rv' && radarTileLayer && map.hasLayer(radarTileLayer)) map.removeLayer(radarTileLayer);
+        if (src !== 'lwxr') { hideLibreWxrLayer(map); setRadarStatusMsg(''); }
+        if (src === 'lwxr') { activateLibreWxr(map); } else {
+            if (src === 'imgw') imgwFrames = generateImgwRadarFrames();
+            const list = getFramesForSource(src);
+            syncSlider(list.length, Math.max(0, list.length - 1));
+            showRadarFrame(map, currentFrame);
         }
-
-        const count = src === 'imgw' ? imgwFrames.length : radarFrames.length;
-        const slider = document.getElementById('rv-slider');
-        if (slider && count > 0) {
-            slider.max = count - 1;
-            slider.value = count - 1;
-            currentFrame = count - 1;
-        }
-        showRadarFrame(map, currentFrame);
-        if (typeof window.renderLayerManagerUI === 'function') window.renderLayerManagerUI();
+        window.renderLayerManagerUI?.();
     };
+}
+
+export function initRadar(map) {
+    imgwFrames = generateImgwRadarFrames();
+    const sat = initSatellite(map);
+    applySavedLibreWxrUI();
+    loadRainViewer(map);
+    registerRadarGlobals(map);
     setupRadarControls(map);
     return {
-        satelliteDayLayer,
-        satelliteNightLayer,
-        getActiveSatelliteLayer: () => (activeSatMode === 'night' ? satelliteNightLayer : satelliteDayLayer),
-        getRadarOverlay: () => (activeRadarSource === 'imgw' ? imgwRadarOverlay : radarTileLayer)
+        ...sat,
+        getRadarOverlay: () => (activeRadarSource === 'imgw' ? imgwRadarOverlay : (activeRadarSource === 'lwxr' ? getLibreWxrLayer() : radarTileLayer))
     };
 }

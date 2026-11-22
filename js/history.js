@@ -1,6 +1,6 @@
 // history.js - trendy i ekstrema z historii IMGW zapisanej w Firebase RTDB (tylko portal meteo).
 // Zrodlo: Firebase Realtime Database REST API, https://firebase.google.com/docs/reference/rest/database
-// Snapshoty /imgw_historia zapisuje worker Cloudflare co 30 minut.
+// Snapshoty /imgw_historia zapisuje worker Cloudflare co 10 minut (retencja 12h).
 // Wymaga window.BMapaApi (rejestrowane w mapa.js podczas initMapa).
 
 (function () {
@@ -8,11 +8,13 @@
     const CACHE_TTL_MS = 60000;
     const MIN_TREND_HOURS = 0.16;
 
-    let historyCache = null;
-    let historyCacheTime = 0;
+    let historyCache = null, historyCacheTime = 0;
 
+    // Parsuje zarowno nowe znaczniki ISO z Z, jak i starsze wpisy bez strefy jako UTC
     function snapTime(snap) {
-        return new Date(snap.czas || snap.czas_pobrania);
+        const raw = String(snap?.czas || snap?.czas_pobrania || '').trim();
+        if (!raw) return new Date(NaN);
+        return new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw.replace(' ', 'T')}Z`);
     }
 
     function formatHm(dt) {
@@ -60,7 +62,7 @@
         const data = await res.json();
         if (!data) return [];
         const list = Array.isArray(data) ? data : Object.values(data);
-        historyCache = list.filter(s => s?.stacje).sort((a, b) => snapTime(a) - snapTime(b));
+        historyCache = list.filter(s => s?.stacje && !isNaN(snapTime(s).getTime())).sort((a, b) => snapTime(a) - snapTime(b));
         historyCacheTime = now;
         return historyCache;
     }
@@ -88,7 +90,7 @@
     function computeTrendData(snapshots, zmienna, okres) {
         if (snapshots.length < 2) {
             const firstTime = snapshots[0]?.czas ? snapshots[0].czas.slice(11, 16) : '--:--';
-            return { error: `Oczekiwanie na kolejny pomiar historii (zapisano 1 snapshot o ${firstTime}). Cloudflare zapisuje dane co 30 minut.` };
+            return { error: `Oczekiwanie na kolejny pomiar historii (zapisano 1 snapshot o ${firstTime}). Cloudflare zapisuje dane co 10 minut.` };
         }
         const hoursBack = parseInt(okres.replace('trend', '').replace('h', ''), 10) || 1;
         const latestSnap = snapshots[snapshots.length - 1];
@@ -136,17 +138,19 @@
         return history;
     }
 
-    // Minimum lub maksimum wartosci z calej dostepnej historii (okno 5h)
+    // Minimum lub maksimum wartosci w wybranym oknie czasowym (5h lub 12h)
     function computeMinMaxData(snapshots, zmienna, okres) {
         if (!snapshots.length) return { error: 'Brak snapshotów w historii Firebase.' };
-        const isMax = okres.startsWith('max');
+        const isMax = okres.startsWith('max'), hoursBack = parseInt(okres.replace(/\D/g, ''), 10) || 5;
         const zi = window.BMapaApi.DEFAULT_ZMIENNE[zmienna] || window.BMapaApi.DEFAULT_ZMIENNE['temp'];
-        const pastDt = snapTime(snapshots[0]), latestDt = snapTime(snapshots[snapshots.length - 1]);
-        const result = emptyResult();
+        const latestDt = snapTime(snapshots[snapshots.length - 1]);
+        const windowed = snapshots.filter(s => snapTime(s).getTime() >= latestDt.getTime() - hoursBack * 3600000 - 900000);
+        const activeSnaps = windowed.length ? windowed : snapshots;
+        const pastDt = snapTime(activeSnaps[0]), result = emptyResult();
         result.horyzont = okres; result.typ_danych = isMax ? 'MAKSIMUM' : 'MINIMUM';
         result.czas_od_utc = pastDt.toISOString(); result.czas_do_utc = latestDt.toISOString(); result.latestTimeMs = latestDt.getTime();
 
-        collectStationHistory(snapshots, zmienna).forEach((entries, kod) => {
+        collectStationHistory(activeSnaps, zmienna).forEach((entries, kod) => {
             const meta = window._stationMetaMap ? window._stationMetaMap[kod] : null;
             if (!meta || !entries.length) return;
             const best = entries.reduce((b, e) => (isMax ? e.val > b.val : e.val < b.val) ? e : b);
@@ -165,10 +169,7 @@
         return okres.startsWith('trend') ? computeTrendData(snapshots, zmienna, okres) : computeMinMaxData(snapshots, zmienna, okres);
     };
 
-    window.isHistoryDbEnabled = function () {
-        const chk = document.getElementById('chk-db-connect');
-        return !!(window.firebaseUser && chk && chk.checked);
-    };
+    window.isHistoryDbEnabled = () => !!(window.firebaseUser && document.getElementById('chk-db-connect')?.checked);
 
     window.toggleDatabaseConnection = function (forcedState) {
         const chk = document.getElementById('chk-db-connect');

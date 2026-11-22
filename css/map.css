@@ -127,3 +127,67 @@
     letter-spacing: 0.4px;
     white-space: nowrap;
 }
+
+/* Panel opcji radaru LibreWXR i wskaznik prognozy nowcasting */
+.radar-nowcast-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+#rv-slider {
+    accent-color: var(--accent-primary);
+}
+#rv-slider.slider-nowcast {
+    accent-color: #f59e0b;
+}
+.lwxr-options-box {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+}
+.lwxr-select-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.lwxr-field-lbl {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+}
+.lwxr-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+}
+.lwxr-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+.radar-status-msg {
+    margin-top: 6px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.35;
+}
+.radar-status-msg.is-error {
+    color: #f87171;
+}

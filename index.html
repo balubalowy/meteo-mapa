@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>B-Mapa</title>
-  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, RainViewer, EUMETSAT.">
+  <meta name="description" content="Interaktywna mapa synoptyczna i radarowa na żywo: IMGW-PIB, SYNOP, DWD ICON, IEM ASOS, LibreWXR, RainViewer, EUMETSAT.">
   <link rel="icon" type="image/png" href="icons/icon-512.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
   
@@ -46,13 +46,15 @@
 
         <!-- SEKCJA: Radar -->
         <div style="padding: 15px; border-bottom: 1px solid var(--border-subtle);">
-            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; font-weight: bold;">
-                Radar
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: bold;">Radar</span>
+                <span id="rv-forecast-badge" class="radar-nowcast-badge" style="display: none;">PROGNOZA</span>
             </div>
             <!-- Przełącznik źródła radaru -->
             <div style="display: flex; gap: 4px; background: var(--bg-secondary); padding: 3px; border-radius: 6px; border: 1px solid var(--border-subtle); margin-bottom: 8px;">
-                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; text-align: center;">IMGW</button>
-                <button id="radar-src-rv" class="btn btn-primary" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; text-align: center;">RainViewer</button>
+                <button id="radar-src-imgw" class="btn btn-ghost" onclick="setRadarSource('imgw')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; text-align: center;">IMGW</button>
+                <button id="radar-src-rv" class="btn btn-primary" onclick="setRadarSource('rv')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; font-weight: 600; text-align: center;">RainViewer</button>
+                <button id="radar-src-lwxr" class="btn btn-ghost" onclick="setRadarSource('lwxr')" style="flex: 1; padding: 4px 5px; font-size: 0.72rem; text-align: center;" title="LibreWXR: kompozyt OPERA + prognoza +60 min, ruch komórek, komórki burzowe i wyładowania">LibreWXR</button>
             </div>
 
             <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
@@ -60,8 +62,40 @@
                     <i data-lucide="play"></i>
                 </button>
                 <span id="rv-time" style="font-family: monospace; font-size: 0.9rem; font-weight: bold; width: 50px; text-align: center;">--:--</span>
-                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10" style="flex: 1; accent-color: var(--accent-primary);">
+                <input type="range" id="rv-slider" aria-label="Oś czasu klatek radarowych" min="0" max="10" value="10" style="flex: 1;">
             </div>
+
+            <!-- Opcje radaru LibreWXR: paleta, wyładowania, wektory ruchu, komórki burzowe -->
+            <div id="lwxr-options" class="lwxr-options-box" style="display: none;">
+                <div class="lwxr-select-grid">
+                    <div>
+                        <label for="lwxr-color" class="lwxr-field-lbl">Paleta radaru:</label>
+                        <select id="lwxr-color" class="form-select" aria-label="Paleta kolorów radaru LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()" style="padding: 3px 6px; font-size: 0.74rem;">
+                            <option value="10" selected>10: Viper HD</option>
+                            <option value="14">14: Windy</option>
+                            <option value="2">2: Universal Blue</option>
+                            <option value="3">3: Titan</option>
+                            <option value="11">11: MRMS CREF</option>
+                            <option value="7">7: Rainbow</option>
+                            <option value="1">1: Rainviewer Original</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="lwxr-lightning" class="lwxr-field-lbl">Wyładowania:</label>
+                        <select id="lwxr-lightning" class="form-select" aria-label="Warstwa wyładowań LibreWXR" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()" style="padding: 3px 6px; font-size: 0.74rem;">
+                            <option value="" selected>Wyłączone</option>
+                            <option value="dots">Kropki (dots)</option>
+                            <option value="bolts">Błyskawice (bolts)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="lwxr-checks">
+                    <label title="Wektory kierunku i prędkości przemieszczania komórek opadowych"><input type="checkbox" id="lwxr-arrows" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Ruch komórek</label>
+                    <label title="Detekcja i oznaczanie komórek burzowych"><input type="checkbox" id="lwxr-cells" onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Komórki burzowe</label>
+                    <label title="Rozróżnienie opadów śniegu i deszczu"><input type="checkbox" id="lwxr-snow" checked onchange="window.updateLibreWxrOptions && window.updateLibreWxrOptions()"> Śnieg / deszcz</label>
+                </div>
+            </div>
+            <div id="radar-status-msg" class="radar-status-msg" style="display: none;"></div>
         </div>
 
         <!-- SEKCJA: IMGW -->
@@ -127,8 +161,11 @@
                         <option value="trend2h" disabled title="Wymaga logowania kontem Google">Trend 2h</option>
                         <option value="trend3h" disabled title="Wymaga logowania kontem Google">Trend 3h</option>
                         <option value="trend5h" disabled title="Wymaga logowania kontem Google">Trend 5h</option>
+                        <option value="trend12h" disabled title="Wymaga logowania kontem Google">Trend 12h</option>
                         <option value="max5" disabled title="Wymaga logowania kontem Google">Maks. 5h</option>
                         <option value="min5" disabled title="Wymaga logowania kontem Google">Min. 5h</option>
+                        <option value="max12" disabled title="Wymaga logowania kontem Google">Maks. 12h</option>
+                        <option value="min12" disabled title="Wymaga logowania kontem Google">Min. 12h</option>
                     </select>
                 </div>
                 
@@ -208,7 +245,8 @@
                     <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
                     <li><b>DWD / Open-Meteo</b> (CC BY 4.0) - dane modelu numerycznego DWD ICON (icon_seamless) jako opcjonalne dopełnienie przestrzenne.</li>
                     <li><b>IEM ASOS (Iowa State University)</b> - zagraniczne stacje lotniskowe METAR/ASOS (CZ, SK, DE, LT, UA, BY).</li>
-                    <li><b>RainViewer</b> - kafelkowy kompozyt radarów meteorologicznych (archiwum i nowcasting).</li>
+                    <li><b>RainViewer</b> - kafelkowy kompozyt radarów meteorologicznych (archiwum opadów).</li>
+                    <li><b>LibreWXR (CC BY 4.0) / EUMETNET OPERA</b> - europejski kompozyt radarowy, prognoza nowcasting (+60 min), wektory ruchu opadów, detekcja komórek burzowych oraz wyładowania.</li>
                     <li><b>EUMETSAT</b> - zobrazowania satelitarne WMS: tryb dzienny MSG FES RGB (msg_fes:rgb_eview) oraz nocny MTG-I1 FCI IR 10.5 µm (mtg_fd:ir105_hrfi).</li>
                     <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i rzeźba terenu.</li>
                     <li><b>GeoNames</b> (CC BY 4.0) - baza współrzędnych i wielkości miejscowości dla warstwy etykiet miast.</li>

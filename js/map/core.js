@@ -93,6 +93,7 @@ export function initMap(containerId = 'premium-map') {
         if (typeof window.updateBoundariesStyle === 'function') {
             window.updateBoundariesStyle(isLight);
         }
+        window.setLibreWxrTheme?.(isLight);
     });
 
     return { map, basemaps, cityLabels };

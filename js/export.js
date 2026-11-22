@@ -28,10 +28,11 @@
         return 'AKTUALNE';
     }
 
-    function determineDateRange(pData, typDanych) {
+    function determineDateRange(pData, typDanych, horyzont) {
         const dtDo = pData?.czas_do_utc ? new Date(pData.czas_do_utc) : new Date(pData?.latestTimeMs || Date.now());
         if (pData?.czas_od_utc) return { dtOd: new Date(pData.czas_od_utc), dtDo };
-        const dtOd = typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - 5 * 3600000);
+        const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 5;
+        const dtOd = typDanych === 'AKTUALNE' ? dtDo : new Date(dtDo.getTime() - hrs * 3600000);
         return { dtOd, dtDo };
     }
 
@@ -48,9 +49,10 @@
             return { opis: `Aktualne: ${dataStr}, ${timeDo} (${formatHmUtc(dtDo)} UTC)`, fileTag: `aktualne_${ymd}T${hmDo}Z` };
         }
         if (typDanych === 'MINIMUM' || typDanych === 'MAKSIMUM') {
+            const hrs = parseInt(String(horyzont || '').replace(/\D/g, ''), 10) || 5;
             const lbl = typDanych === 'MINIMUM' ? 'Minimum' : 'Maksimum';
-            const tag = typDanych === 'MINIMUM' ? 'min5h' : 'max5h';
-            return { opis: `${lbl} (5h): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
+            const tag = `${typDanych === 'MINIMUM' ? 'min' : 'max'}${hrs}h`;
+            return { opis: `${lbl} (${hrs}h): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${tag}_${ymd}T${hmOd}-${hmDo}Z` };
         }
         return { opis: `Trend (${horyzont}): ${dataStr}, ${timeOd}-${timeDo} (${formatHmUtc(dtOd)}-${formatHmUtc(dtDo)} UTC)`, fileTag: `${horyzont}_${ymd}T${hmOd}-${hmDo}Z` };
     }
@@ -59,9 +61,8 @@
         const okres = forcedOkres || window.currentRenderedOkres || 'now';
         const typDanych = determineDataType(pData, okres);
         const horyzont = pData?.horyzont || okres;
-        const { dtOd, dtDo } = determineDateRange(pData, typDanych);
+        const { dtOd, dtDo } = determineDateRange(pData, typDanych, horyzont);
         const { opis, fileTag } = formatScopeDescriptions(typDanych, horyzont, dtOd, dtDo);
-
         return { typDanych, horyzont, czasOdIso: toUtcIso(dtOd), czasDoIso: toUtcIso(dtDo), opis, fileTag };
     }
 
@@ -140,10 +141,7 @@
 
         try {
             const data = window.currentRenderedData || (window.getMapExportData ? (await window.getMapExportData(param))[param] : null);
-            if (!data?.pt_lats?.length) {
-                showStatus(btn, 'Brak danych', true);
-                return;
-            }
+            if (!data?.pt_lats?.length) { showStatus(btn, 'Brak danych', true); return; }
             const scope = resolveScope(data);
             const rows = buildRowsFromParam(param, data);
             if (!rows.length) { showStatus(btn, 'Brak danych', true); return; }
@@ -162,15 +160,9 @@
     window.exportAllParamsCsv = async function(btn) {
         if (btn) btn.disabled = true;
         try {
-            if (typeof window.getMapExportData !== 'function') {
-                showStatus(btn, 'Silnik niedostępny', true);
-                return;
-            }
+            if (typeof window.getMapExportData !== 'function') { showStatus(btn, 'Silnik niedostępny', true); return; }
             const dataObj = await window.getMapExportData();
-            if (!dataObj) {
-                showStatus(btn, 'Brak danych', true);
-                return;
-            }
+            if (!dataObj) { showStatus(btn, 'Brak danych', true); return; }
 
             const allRows = [];
             let latestScope = null;

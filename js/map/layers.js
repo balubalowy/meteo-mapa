@@ -88,6 +88,7 @@ const LAYER_TOGGLE_ACTIONS = {
         }
     },
     radar: (map, comp, chk) => {
+        window.onRadarVisibilityChange?.(chk);
         const overlay = comp.getRadarOverlay?.();
         if (!overlay) return;
         if (chk && !map.hasLayer(overlay)) map.addLayer(overlay);
@@ -111,11 +112,9 @@ function renderLayerControls(key) {
         </div>`;
     }
     if (key === 'radar') {
-        const isImgw = (window.getRadarSource?.() || 'rv') === 'imgw';
-        return `<div style="display:inline-flex; gap:2px; margin-left:auto; margin-right:6px;">
-            <button class="btn ${isImgw ? 'btn-primary' : 'btn-ghost'}" onclick="window.setRadarSource('imgw')" style="padding:1px 5px; font-size:0.65rem;">IMGW</button>
-            <button class="btn ${!isImgw ? 'btn-primary' : 'btn-ghost'}" onclick="window.setRadarSource('rv')" style="padding:1px 5px; font-size:0.65rem;">RainViewer</button>
-        </div>`;
+        const src = window.getRadarSource?.() || 'rv';
+        const mk = (id, lbl) => `<button class="btn ${src === id ? 'btn-primary' : 'btn-ghost'}" onclick="window.setRadarSource('${id}')" style="padding:1px 4px; font-size:0.62rem;">${lbl}</button>`;
+        return `<div style="display:inline-flex; gap:2px; margin-left:auto; margin-right:6px;">${mk('imgw', 'IMGW')}${mk('rv', 'RV')}${mk('lwxr', 'LWXR')}</div>`;
     }
     return '';
 }
