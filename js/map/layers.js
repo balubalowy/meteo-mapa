@@ -3,12 +3,12 @@
 
 export const DEFAULT_MAP_LAYERS = {
     radar:     { id: 'radar',     name: 'Radar', visible: false, opacity: 68, pane: 'radarPane' },
-    inter:     { id: 'inter',     name: 'IDW', visible: true, opacity: 88, pane: 'weatherPane' },
-    satellite: { id: 'satellite', name: 'Satelita', visible: true, opacity: 68, pane: 'satellitePane' }
+    inter:     { id: 'inter',     name: 'Interpolacja', visible: true, opacity: 80, pane: 'weatherPane' },
+    satellite: { id: 'satellite', name: 'Satelita', visible: false, opacity: 74, pane: 'satellitePane' }
 };
 export const DEFAULT_LAYER_ORDER = ['radar', 'inter', 'satellite'];
 
-const STORAGE_LAYERS_KEY = 'meteo_map_layers_v7', STORAGE_ORDER_KEY = 'meteo_map_order_v7';
+const STORAGE_LAYERS_KEY = 'meteo_map_layers_v8', STORAGE_ORDER_KEY = 'meteo_map_order_v8';
 let boundariesLayerGroup = null, countriesGeoLayer = null, provincesGeoLayer = null, isCurrentThemeLight = false;
 
 function getBoundaryColors(isLight) {

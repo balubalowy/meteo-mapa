@@ -78,7 +78,8 @@ function isLightBasemap(name) {
 export function initMap(containerId = 'premium-map') {
     if (window.premiumMap) window.premiumMap.remove();
 
-    const map = L.map(containerId, { center: [51.9194, 19.1451], zoom: 6, zoomControl: false });
+    // Srodek geograficzny Polski i przyblizenie zoom 7 (o +1 wzgledem poprzedniego widoku)
+    const map = L.map(containerId, { center: [52.0693, 19.4803], zoom: 7, zoomControl: false });
     window.premiumMap = map;
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 

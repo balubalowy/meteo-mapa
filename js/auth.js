@@ -20,7 +20,6 @@ function updateRtdbSelectUI(isAuth) {
     if (chk) {
         chk.disabled = !isAuth;
         if (!isAuth) chk.checked = false;
-        else if (!chk.hasAttribute('data-user-set')) chk.checked = true;
     }
     if (typeof window.toggleDatabaseConnection === 'function') {
         window.toggleDatabaseConnection(chk?.checked);
