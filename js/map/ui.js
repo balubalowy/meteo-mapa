@@ -124,7 +124,7 @@ export function selectMapParam(param) {
 }
 
 export function setStationProvider(provider) {
-    const isRR = provider === 'rr';
+    const isRR = provider === 'rr' && Boolean(window.firebaseUser);
     const rImgw = document.getElementById('provider-imgw');
     const rRr = document.getElementById('provider-rr');
     if (rImgw) rImgw.checked = !isRR;

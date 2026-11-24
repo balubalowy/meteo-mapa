@@ -150,7 +150,7 @@ export function clearLiveStationsCache() {
 }
 
 export async function getIMGWLiveData(targetParam = null) {
-    const isRR = document.getElementById('provider-rr')?.checked ?? false;
+    const isRR = Boolean(window.firebaseUser) && (document.getElementById('provider-rr')?.checked ?? false);
     const dataMode = document.getElementById('chk-source-model')?.checked ? 'hybrid' : 'stations';
     const cacheKey = `${dataMode}_${isRR ? 'rr' : 'imgw'}`, now = Date.now();
     const needSnow = targetParam === null || targetParam === 'snieg' || targetParam === 'snieg_swiezy';

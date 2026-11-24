@@ -16,15 +16,7 @@
 .map-sidebar::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 2px; }
 .map-sidebar::-webkit-scrollbar-thumb:hover { background: #525252; }
 
-.sb-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 11px 14px;
-    background: #121212;
-    border-bottom: 2px solid #303030;
-}
+.sb-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 14px; background: #121212; border-bottom: 2px solid #303030; }
 .sb-brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .sb-brand h2 { margin: 0; font-size: 16px; font-weight: 700; color: #ffffff; letter-spacing: -0.01em; }
 .sb-delay { font-size: 12.5px; color: #aaaaaa; white-space: nowrap; }
@@ -37,46 +29,13 @@
 .sb-sec { padding: 13px 14px; border-bottom: 2px solid #2b2b2b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03); }
 .sb-sec:last-child { border-bottom: none; }
 
-.sb-sec-h {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: #c0c0c0;
-    margin-bottom: 8px;
-}
+.sb-sec-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 600; color: #c0c0c0; margin-bottom: 8px; }
 .sb-sec-title { color: #f0f0f0; font-size: 15px; font-weight: 700; }
 
-.sb-fcst-tag {
-    display: none;
-    align-items: center;
-    background: #e5e5e5;
-    color: #111111;
-    padding: 1px 6px;
-    border-radius: 2px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-}
+.sb-fcst-tag { display: none; align-items: center; background: #e5e5e5; color: #111111; padding: 1px 6px; border-radius: 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; }
 
 .sb-player { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.sb-play-btn {
-    min-width: 28px;
-    height: 26px;
-    padding: 0 6px;
-    border: 1px solid #383838;
-    background: #1c1c1c;
-    color: #ffffff;
-    border-radius: 3px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
+.sb-play-btn { min-width: 28px; height: 26px; padding: 0 6px; border: 1px solid #383838; background: #1c1c1c; color: #ffffff; border-radius: 3px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .sb-play-btn:hover { background: #262626; border-color: #555555; }
 .sb-play-btn svg { width: 14px; height: 14px; }
 .sb-time { font-family: ui-monospace, Consolas, monospace; font-size: 13px; font-weight: 600; color: #ffffff; white-space: nowrap; min-width: 72px; }
@@ -98,11 +57,10 @@
 .sb-status.is-error { color: #f87171; }
 
 .sb-seg { display: flex; border: 1px solid #343434; border-radius: 3px; overflow: hidden; background: #181818; }
-.sb-seg-compact { width: 146px; }
+.sb-seg-compact { width: auto; }
 .sb-seg button {
     flex: 1;
     border: none;
-    border-right: 1px solid #343434;
     background: #181818;
     color: #c0c0c0;
     padding: 5px 6px;
@@ -111,7 +69,8 @@
     font-family: inherit;
     white-space: nowrap;
 }
-.sb-seg button:last-child { border-right: none; }
+.sb-seg button + button { border-left: 1px solid #343434; }
+.sb-seg-compact button { padding: 5px 10px; }
 .sb-seg button:hover { color: #ffffff; background: #222222; }
 .sb-seg button.is-active { background: #e5e5e5; color: #111111; font-weight: 700; }
 
@@ -194,6 +153,8 @@
 
 .sb-sources { background: #0f0f0f; font-size: 13.5px; color: #a8a8a8; line-height: 1.45; }
 .sb-sources b { color: #e0e0e0; font-weight: 700; }
+.sb-sources a { color: #d4d4d4; text-decoration: underline; }
+.sb-sources a:hover { color: #ffffff; }
 .sb-sources ul { margin: 6px 0 8px 16px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #9a9a9a; }
 .sb-sources-copy { border-top: 1px solid #262626; padding-top: 8px; font-size: 13px; color: #9a9a9a; }
 .sb-hidden { display: none !important; }

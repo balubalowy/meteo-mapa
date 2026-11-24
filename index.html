@@ -106,7 +106,7 @@
                 <span>Parametr</span>
                 <div class="sb-seg sb-seg-compact" role="group" aria-label="Dostawca danych ze stacji">
                     <button type="button" id="btn-prov-imgw" class="is-active" onclick="window.setStationProvider && window.setStationProvider('imgw')" title="Oficjalne stacje IMGW (odczyty godzinowe)">IMGW</button>
-                    <button type="button" id="btn-prov-rr" onclick="window.setStationProvider && window.setStationProvider('rr')" title="Rafał Raczyński (odczyty 10-minutowe)">R.R. 10m</button>
+                    <button type="button" id="btn-prov-rr" class="sb-hidden" onclick="window.setStationProvider && window.setStationProvider('rr')" title="Rafał Raczyński (odczyty 10-minutowe)">R.R. 10m</button>
                 </div>
                 <input type="radio" name="station-provider" id="provider-imgw" value="imgw" checked hidden>
                 <input type="radio" name="station-provider" id="provider-rr" value="rr" hidden>
@@ -213,10 +213,10 @@
                 Pełny wykaz źródeł meteorologicznych i geograficznych użytych na mapie:
                 <ul>
                     <li><b>IMGW-PIB</b> (danepubliczne.imgw.pl) - pomiary telemetryczne ze stacji meteo, depesze SYNOP (ciśnienie QFF) oraz biuletyn pokrywy śnieżnej.</li>
-                    <li><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
+                    <li id="source-item-rr" class="sb-hidden"><b>Rafał Raczyński</b> (rafalraczynski.com.pl) - opcjonalny kanał odczytów 10-minutowych ze stacji IMGW (przełącznik R.R. 10m).</li>
                     <li><b>DWD / Open-Meteo</b> (CC BY 4.0) - dane modelu numerycznego DWD ICON (icon_seamless) jako opcjonalne dopełnienie przestrzenne.</li>
                     <li><b>IEM ASOS (Iowa State University)</b> - zagraniczne stacje lotniskowe METAR/ASOS (CZ, SK, DE, LT, UA, BY).</li>
-                    <li><b>LibreWXR (CC BY 4.0) / EUMETNET OPERA</b> - europejski kompozyt radarowy, prognoza nowcasting (+60 min), wektory ruchu opadów, detekcja komórek burzowych oraz wyładowania.</li>
+                    <li><b>LibreWXR</b> (<a href="https://librewxr.net" target="_blank" rel="noopener noreferrer">librewxr.net</a>, CC BY 4.0; Włochy DPC: CC BY-SA 4.0) / <b>EUMETNET OPERA</b> - europejski kompozyt radarowy, prognoza nowcasting (+60 min), wektory ruchu opadów, detekcja komórek burzowych oraz wyładowania (<a href="https://github.com/JoshuaKimsey/LibreWXR#data-sources" target="_blank" rel="noopener noreferrer">pełny wykaz źródeł</a>).</li>
                     <li><b>EUMETSAT</b> - zobrazowania satelitarne WMS: tryb dzienny MSG FES RGB (msg_fes:rgb_eview) oraz nocny MTG-I1 FCI IR 10.5 µm (mtg_fd:ir105_hrfi).</li>
                     <li><b>Esri, OpenStreetMap (&copy; OSM contributors, ODbL), OpenTopoMap (CC-BY-SA)</b> - podkłady kartograficzne i rzeźba terenu.</li>
                     <li><b>GeoNames</b> (CC BY 4.0) - baza współrzędnych i wielkości miejscowości dla warstwy etykiet miast.</li>

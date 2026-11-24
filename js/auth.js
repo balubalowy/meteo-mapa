@@ -24,6 +24,11 @@ function updateRtdbSelectUI(isAuth) {
     if (typeof window.toggleDatabaseConnection === 'function') {
         window.toggleDatabaseConnection(chk?.checked);
     }
+    document.getElementById('btn-prov-rr')?.classList.toggle('sb-hidden', !isAuth);
+    document.getElementById('source-item-rr')?.classList.toggle('sb-hidden', !isAuth);
+    if (!isAuth && document.getElementById('provider-rr')?.checked) {
+        window.setStationProvider?.('imgw');
+    }
 }
 
 if (isConfigured) {
