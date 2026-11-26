@@ -23,36 +23,36 @@
         return new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            s.onload = () => {
-                if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                resolve();
-            };
-            s.onerror = reject;
-            document.head.appendChild(s);
+            s.onload = () => { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; resolve(); };
+            s.onerror = reject; document.head.appendChild(s);
         });
     }
 
-    // Pobiera surowy bufor PDF z cache: 'no-store' i losowym parametrem, aby ominac max-age=31536000 po stronie IMGW
+    function repairTruncatedPdf(raw) {
+        const head = new TextDecoder('latin1').decode(raw.subarray(0, 2048));
+        if (!head.startsWith('%PDF')) throw new Error('Invalid PDF header');
+        const rootId = (head.match(/(\d+)\s+0\s+obj[\s\S]{0,120}?\/Type\s*\/Catalog/) || [])[1] || '1';
+        const suffix = new TextEncoder().encode(`\nendstream\nendobj\ntrailer\n<</Root ${rootId} 0 R>>\nstartxref\n0\n%%EOF\n`);
+        const out = new Uint8Array(raw.length + suffix.length);
+        out.set(raw, 0); out.set(suffix, raw.length); return out;
+    }
+
+    // Pobiera bufor PDF z cache: 'no-store' i w razie ucietego pliku IMGW naprawia brakujacy trailer
     async function extractTextFromPdf(pdfUrl) {
         await ensurePdfJs();
         const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), PDF_TIMEOUT_MS);
         try {
             const resp = await fetch(pdfUrl, { cache: 'no-store', signal: ctrl.signal });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const doc = await window.pdfjsLib.getDocument({
-                data: new Uint8Array(await resp.arrayBuffer()),
-                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-                cMapPacked: true
-            }).promise;
+            const raw = new Uint8Array(await resp.arrayBuffer());
+            const opts = data => ({ data, cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/', cMapPacked: true });
+            let doc;
+            try { doc = await window.pdfjsLib.getDocument(opts(raw.slice())).promise; }
+            catch (_) { doc = await window.pdfjsLib.getDocument(opts(repairTruncatedPdf(raw))).promise; }
             let fullText = '';
-            for (let p = 1; p <= doc.numPages; p++) {
-                const content = await (await doc.getPage(p)).getTextContent();
-                fullText += content.items.map(item => item.str).join(' ') + '\n';
-            }
+            for (let p = 1; p <= doc.numPages; p++) fullText += (await (await doc.getPage(p)).getTextContent()).items.map(i => i.str).join(' ') + '\n';
             return fullText;
-        } finally {
-            clearTimeout(timer);
-        }
+        } finally { clearTimeout(timer); }
     }
 
     function assignSnowValue(state, val, hasDot) {
@@ -62,14 +62,9 @@
     }
 
     function updateSnowState(state, token) {
-        if (/^[1-9]$/.test(token) && state.gatunek === null) {
-            state.gatunek = parseInt(token, 10);
-            return;
-        }
+        if (/^[1-9]$/.test(token) && state.gatunek === null) { state.gatunek = parseInt(token, 10); return; }
         if (/^[1-9]\d{2,}$/.test(token) && state.gatunek === null && state.zapas === null) {
-            state.gatunek = parseInt(token[0], 10);
-            state.zapas = parseFloat(token.substring(1)) || 0;
-            return;
+            state.gatunek = parseInt(token[0], 10); state.zapas = parseFloat(token.substring(1)) || 0; return;
         }
         assignSnowValue(state, parseFloat(token) || 0, token.includes('.'));
     }
@@ -126,24 +121,24 @@
     const fetchFallbackSnowRecords = () => fetch(`dane/snow_latest.json?cb=${Date.now()}`, { cache: 'no-store' })
         .then(r => r.ok ? r.json() : { stacje: [] }).then(d => d.stacje || []).catch(() => []);
 
+    const isFreshFallback = recs => {
+        const dt = parseReportTime(recs?.find(r => r.data)?.data || '');
+        return dt.timeMs > 0 && Math.abs(Date.now() - dt.timeMs) <= 7 * 86400000;
+    };
+
     async function fetchSnowRecords(forceRefresh = false) {
-        const now = Date.now();
-        if (!forceRefresh && _snowCache?.length && (now - _snowCacheTime < (isBulletinFromToday(_snowCacheDate) ? FRESH_CACHE_TTL : STALE_RETRY_TTL))) {
-            return _snowCache;
-        }
+        const now = Date.now(), ttl = isBulletinFromToday(_snowCacheDate) ? FRESH_CACHE_TTL : STALE_RETRY_TTL;
+        if (!forceRefresh && _snowCache?.length && (now - _snowCacheTime < ttl)) return _snowCache;
         const stationsMeta = await fetch('dane/snow_stations.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : []).catch(() => []);
         let records = await fetchPdfSnowRecords(stationsMeta);
         if (!records.length && _snowCache?.length) { _snowCacheTime = now; return _snowCache; }
-        if (!records.length) records = await fetchFallbackSnowRecords();
-        if (records?.length > 0) {
-            _snowCache = records; _snowCacheTime = now; _snowCacheDate = records.find(r => r.data)?.data || '';
-        }
+        if (!records.length) { const fb = await fetchFallbackSnowRecords(); if (isFreshFallback(fb)) records = fb; }
+        if (records?.length > 0) { _snowCache = records; _snowCacheTime = now; _snowCacheDate = records.find(r => r.data)?.data || ''; }
         return records;
     }
 
     function parseReportTime(dateStr) {
-        if (!dateStr) return { timeMs: 0, isoDate: '' };
-        const parts = dateStr.split('.');
+        const parts = dateStr ? dateStr.split('.') : [];
         if (parts.length !== 3) return { timeMs: 0, isoDate: '' };
         const timeMs = Date.UTC(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10), 6, 0, 0);
         return { timeMs, isoDate: new Date(timeMs).toISOString().replace('.000Z', 'Z') };
